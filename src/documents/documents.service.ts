@@ -5,12 +5,14 @@ import { UpdateDocumentDto } from './dto/update-document.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Inject } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()
 export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject('SUPABASE_CLIENT') private readonly supabase: SupabaseClient,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async createDocument(
@@ -82,6 +84,14 @@ export class DocumentsService {
       });
       console.log('Document created in database:', document.id);
 
+      await this.auditLogsService.createLog(
+        userId,
+        'DOCUMENT_UPLOADED',
+        'Document',
+        document.id,
+        { title: dto.title, school_id: dto.school_id, file_type: file.mimetype },
+      );
+
       return document;
     } catch (error) {
       console.error('Upload failed:', error.message, error.stack);
@@ -119,6 +129,14 @@ export class DocumentsService {
       },
     });
 
+    await this.auditLogsService.createLog(
+      userId,
+      'DOCUMENT_UPDATED',
+      'Document',
+      id,
+      { title: dto.title, school_id: document.school_id },
+    );
+
     return updatedDocument;
   }
 
@@ -129,13 +147,50 @@ export class DocumentsService {
 
     await this.checkSchoolAccess(userId, schoolId);
 
-    return this.prisma.document.findMany({
+    const documents = await this.prisma.document.findMany({
       where: { school_id: schoolId, status: 'active' },
       include: { user: true },
       skip: offset,
       take: limit,
       orderBy: { created_at: 'desc' },
     });
+
+    await this.auditLogsService.createLog(
+      userId,
+      'DOCUMENT_LISTED',
+      'Document',
+      null,
+      { school_id: schoolId, limit, offset },
+    );
+
+    return documents;
+  }
+
+  async deleteDocument(id: string, userId: string) {
+    if (!id) throw new BadRequestException('Invalid document ID');
+    const document = await this.prisma.document.findUnique({
+      where: { id },
+    });
+    if (!document) throw new NotFoundException('Document not found');
+
+    await this.checkSchoolAccess(userId, document.school_id, ['school_admin', 'super_admin', 'system_admin']);
+
+    // Delete file from Supabase Storage
+    const filePath = document.file_url.split('/documents/')[1];
+    const { error: deleteError } = await this.supabase.storage.from('documents').remove([filePath]);
+    if (deleteError) console.warn('Failed to delete file from storage:', deleteError.message);
+
+    await this.prisma.document.delete({ where: { id } });
+
+    await this.auditLogsService.createLog(
+      userId,
+      'DOCUMENT_DELETED',
+      'Document',
+      id,
+      { title: document.title, school_id: document.school_id },
+    );
+
+    return { message: 'Document deleted successfully' };
   }
 
   private async checkSchoolAccess(userId: string, schoolId: string, allowedRoles: string[] = []): Promise<void> {

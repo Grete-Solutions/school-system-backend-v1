@@ -9,6 +9,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     @Inject('SUPABASE_CLIENT') private readonly supabase: SupabaseClient,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -39,6 +41,14 @@ export class AuthService {
         phone_number: dto.phone_number,
       },
     });
+
+    await this.auditLogsService.createLog(
+      user.id,
+      'USER_CREATED',
+      'User',
+      user.id,
+      { email: user.email, role: user.role },
+    );
 
     return { user, token: this.generateToken(user.id, user.role) };
   }

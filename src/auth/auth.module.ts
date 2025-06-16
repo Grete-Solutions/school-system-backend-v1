@@ -7,6 +7,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
 import { PrismaService } from '../common/prisma.service';
 import { supabaseProvider } from '../config/supabase.config';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { supabaseProvider } from '../config/supabase.config';
       },
       inject: [ConfigService],
     }),
+    AuditLogsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, PrismaService, supabaseProvider],

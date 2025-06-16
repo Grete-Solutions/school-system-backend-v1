@@ -29,6 +29,7 @@ model User {
   notifications Notification[] @relation("UserNotifications")
   createdNotifications Notification[] @relation("NotificationCreator")
   reports       Report[]       @relation("UserReports")
+  auditLogs     AuditLog[]     @relation("UserAuditLogs")
 }
 
 model Role {
@@ -173,4 +174,15 @@ model Report {
   updated_at      DateTime  @updatedAt
   user            User      @relation("UserReports", fields: [user_id], references: [id], onDelete: Cascade)
   school          School?   @relation("SchoolReports", fields: [school_id], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id              String    @id @default(uuid())
+  user_id         String
+  action          String    // e.g., USER_CREATED, DOCUMENT_UPLOADED
+  resource_type   String    // e.g., User, Document, Notification
+  resource_id     String?   // ID of the affected resource
+  details         Json?     // Additional metadata
+  created_at      DateTime  @default(now())
+  user            User      @relation("UserAuditLogs", fields: [user_id], references: [id], onDelete: Cascade)
 }
