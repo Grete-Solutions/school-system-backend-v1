@@ -34,7 +34,7 @@ import { ReportsModule } from './reports/reports.module';
     DocumentsModule,
     RolesModule,
     NotificationsModule,
-    ReportsModule,
+    // ReportsModule,
   ],
 })
 export class AppModule {}
