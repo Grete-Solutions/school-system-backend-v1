@@ -1,137 +1,154 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common'; import { PrismaService } from '../common/prisma.service'; import { CreateReportDto } from './dto/create-report.dto';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { PrismaService } from '../common/prisma.service';
+import { CreateReportDto } from './dto/create-report.dto';
 
-@Injectable() export class ReportsService { constructor(private readonly prisma: PrismaService) {}
+@Injectable()
+export class ReportsService {
+  constructor(private readonly prisma: PrismaService) {}
 
-async createReport(userId: string, dto: CreateReportDto) { await this.checkAdminAccess(userId); console.log('Creating report:', dto);
+  async createReport(userId: string, dto: CreateReportDto) {
+    await this.validateRequest(userId, dto);
 
-const user = await this.prisma.user.findUnique({ where: { id: userId } });
-if (!user) throw new NotFoundException('User not found');
+    let data: any;
+    switch (dto.type) {
+      case 'user_activity':
+        data = await this.generateUserActivityReport(dto);
+        break;
+      case 'document_uploads':
+        data = await this.generateDocumentUploadsReport(dto);
+        break;
+      case 'notification_stats':
+        data = await this.generateNotificationStatsReport(dto);
+        break;
+      default:
+        throw new BadRequestException('Invalid report type');
+    }
 
-// Validate filters
-if (dto.school_id) {
-  const school = await this.prisma.school.findUnique({ where: { id: dto.school_id } });
-  if (!school) throw new NotFoundException('School not found');
-  if (user.role === 'school_admin') {
-    const schoolUser = await this.prisma.schoolUser.findUnique({
-      where: { user_id_school_id: { user_id: userId, school_id: dto.school_id } },
+    return this.prisma.report.create({
+      data: {
+        user_id: userId,
+        school_id: dto.school_id,
+        type: dto.type,
+        parameters: {
+          dateFrom: dto.dateFrom,
+          dateTo: dto.dateTo,
+        },
+        data,
+        status: 'completed',
+      },
     });
-    if (!schoolUser) throw new ForbiddenException('Access denied to this school');
+  }
+
+  async getReports(userId: string, schoolId?: string, limit: number = 10, offset: number = 0) {
+    await this.validateRequest(userId, { school_id: schoolId });
+
+    const where: any = { user_id: userId };
+    if (schoolId) where.school_id = schoolId;
+
+    return this.prisma.report.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      skip: offset,
+      take: limit,
+      include: { user: { select: { first_name: true, last_name: true } } },
+    });
+  }
+
+  async getReportById(userId: string, reportId: string) {
+    const report = await this.prisma.report.findUnique({
+      where: { id: reportId },
+      include: { user: { select: { first_name: true, last_name: true } } },
+    });
+    if (!report) throw new NotFoundException('Report not found');
+    if (report.user_id !== userId) throw new ForbiddenException('Access denied');
+    return report;
+  }
+
+  private async generateUserActivityReport(dto: CreateReportDto) {
+    const where: any = {};
+    if (dto.school_id) {
+      where.schoolUsers = { some: { school_id: dto.school_id } };
+    }
+    if (dto.dateFrom || dto.dateTo) {
+      where.created_at = {
+        ...(dto.dateFrom && { gte: new Date(dto.dateFrom) }),
+        ...(dto.dateTo && { lte: new Date(dto.dateTo) }),
+      };
+    }
+
+    const users = await this.prisma.user.findMany({
+      where,
+      select: { id: true, role: true, status: true, created_at: true },
+    });
+
+    return {
+      totalUsers: users.length,
+      roleCounts: users.reduce((acc, user) => ({ ...acc, [user.role]: (acc[user.role] || 0) + 1 }), {}),
+      statusCounts: users.reduce((acc, user) => ({ ...acc, [user.status]: (acc[user.status] || 0) + 1 }), {}),
+    };
+  }
+
+  private async generateDocumentUploadsReport(dto: CreateReportDto) {
+    const where: any = { school_id: dto.school_id };
+    if (dto.dateFrom || dto.dateTo) {
+      where.created_at = {
+        ...(dto.dateFrom && { gte: new Date(dto.dateFrom) }),
+        ...(dto.dateTo && { lte: new Date(dto.dateTo) }),
+      };
+    }
+
+    const documents = await this.prisma.document.findMany({
+      where,
+      select: { id: true, file_type: true, user_id: true, created_at: true },
+    });
+
+    return {
+      totalDocuments: documents.length,
+      fileTypeCounts: documents.reduce((acc, doc) => ({ ...acc, [doc.file_type]: (acc[doc.file_type] || 0) + 1 }), {}),
+      userUploadCounts: documents.reduce((acc, doc) => ({ ...acc, [doc.user_id]: (acc[doc.user_id] || 0) + 1 }), {}),
+    };
+  }
+
+  private async generateNotificationStatsReport(dto: CreateReportDto) {
+    const where: any = { school_id: dto.school_id };
+    if (dto.dateFrom || dto.dateTo) {
+      where.created_at = {
+        ...(dto.dateFrom && { gte: new Date(dto.dateFrom) }),
+        ...(dto.dateTo && { lte: new Date(dto.dateTo) }),
+      };
+    }
+
+    const notifications = await this.prisma.notification.findMany({
+      where,
+      select: { id: true, type: true, status: true, created_at: true },
+    });
+
+    return {
+      totalNotifications: notifications.length,
+      typeCounts: notifications.reduce((acc, notif) => ({ ...acc, [notif.type]: (acc[notif.type] || 0) + 1 }), {}),
+      statusCounts: notifications.reduce((acc, notif) => ({ ...acc, [notif.status]: (acc[notif.status] || 0) + 1 }), {}),
+    };
+  }
+
+  private async validateRequest(userId: string, dto: { school_id?: string }) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { schoolUsers: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const isAdmin = ['super_admin', 'system_admin'].includes(user.role);
+    const isSchoolAdmin = user.schoolUsers.some(
+      (su) => su.role === 'school_admin' && (!dto.school_id || su.school_id === dto.school_id),
+    );
+    if (!isAdmin && !isSchoolAdmin) throw new ForbiddenException('Admin access required');
+
+    if (dto.school_id) {
+      const school = await this.prisma.school.findUnique({ where: { id: dto.school_id } });
+      if (!school) throw new NotFoundException('School not found');
+      if (!isAdmin && !user.schoolUsers.some((su) => su.school_id === dto.school_id)) {
+        throw new ForbiddenException('No access to this school');
+      }
+    }
   }
 }
-if (dto.role_id) {
-  const role = await this.prisma.role.findUnique({ where: { id: dto.role_id } });
-  if (!role) throw new NotFoundException('Role not found');
-}
-
-// Create report record
-const report = await this.prisma.report.create({
-  data: {
-    user_id: userId,
-    type: dto.type,
-    filters: {
-      school_id: dto.school_id,
-      start_date: dto.start_date,
-      end_date: dto.end_date,
-      role_id: dto.role_id,
-    },
-    status: 'pending',
-  },
-});
-
-// Generate report data asynchronously
-this.generateReportData(report.id, dto, userId).catch((error) => {
-  console.error('Report generation failed:', error);
-  this.prisma.report.update({
-    where: { id: report.id },
-    data: { status: 'failed' },
-  });
-});
-
-return report;
-}
-
-async generateReportData(reportId: string, dto: CreateReportDto, userId: string) { let data: any;
-const where: any = {};
-if (dto.school_id) where.school_id = dto.school_id;
-if (dto.start_date || dto.end_date) {
-  where.created_at = {};
-  if (dto.start_date) where.created_at.gte = new Date(dto.start_date);
-  if (dto.end_date) where.created_at.lte = new Date(dto.end_date);
-}
-
-switch (dto.type) {
-  case 'document_summary':
-    const documents = await this.prisma.document.groupBy({
-      by: ['school_id'],
-      where,
-      _count: { id: true },
-      _sum: { file_size: true },
-    });
-    data = {
-      documents: documents.map((d) => ({
-        school_id: d.school_id,
-        document_count: d._count.id,
-        total_size: d._sum.file_size,
-      })),
-    };
-    break;
-
-  case 'user_activity':
-    const users = await this.prisma.user.findMany({
-      where: {
-        ...(dto.role_id ? { roles: { some: { role_id: dto.role_id } } } : {}),
-        documents: { some: where },
-      },
-      select: {
-        id: true,
-        email: true,
-        last_login: true,
-        documents: { where, select: { id: true, created_at: true } },
-      },
-    });
-    data = {
-      users: users.map((u) => ({
-        user_id: u.id,
-        email: u.email,
-        last_login: u.last_login,
-        document_uploads: u.documents.length,
-      })),
-    };
-    break;
-
-  case 'school_stats':
-    const schools = await this.prisma.school.findMany({
-      where: { ...(dto.school_id ? { id: dto.school_id } : {}) },
-      select: {
-        id: true,
-        name: true,
-        _count: {
-          select: { students: true, teachers: true, documents: true },
-        },
-      },
-    });
-    data = {
-      schools: schools.map((s) => ({
-        school_id: s.id,
-        name: s.name,
-        student_count: s._count.students,
-        teacher_count: s._count.teachers,
-        document_count: s._count.documents,
-      })),
-    };
-    break;
-
-  default:
-    throw new BadRequestException('Invalid report type');
-}
-
-await this.prisma.report.update({
-  where: { id: reportId },
-  data: { status: 'completed', data },
-});
-}
-async getReports(userId: string, limit: number = 10, offset: number = 0) { await this.checkAdminAccess(userId); return this.prisma.report.findMany({ where: { user_id: userId }, orderBy: { created_at: 'desc' }, skip: offset, take: limit, }); }
-
-async getReportById(userId: string, reportId: string) { const report = await this.prisma.report.findUnique({ where: { id: reportId } }); if (!report) throw new NotFoundException('Report not found'); if (report.user_id !== userId) throw new ForbiddenException('Access denied'); return report; }
-
-private async checkAdminAccess(userId: string) { const user = await this.prisma.user.findUnique({ where: { id: userId } }); if (!user) throw new NotFoundException('User not found'); if (!['super_admin', 'system_admin', 'school_admin'].includes(user.role)) { throw new ForbiddenException('Admin access required'); } } }

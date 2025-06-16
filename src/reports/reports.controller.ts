@@ -22,10 +22,16 @@ export class ReportsController {
   @UseGuards(JwtAuthGuard)
   async getAll(
     @Request() req: RequestWithUser,
+    @Query('schoolId') schoolId?: string,
     @Query('limit') limit = '10',
     @Query('offset') offset = '0',
   ) {
-    const reports = await this.reportsService.getReports(req.user.sub, parseInt(limit), parseInt(offset));
+    const reports = await this.reportsService.getReports(
+      req.user.sub,
+      schoolId,
+      parseInt(limit),
+      parseInt(offset),
+    );
     return { statusCode: HttpStatus.OK, data: reports };
   }
 

@@ -1,11 +1,9 @@
-import { IsString, IsIn, IsOptional, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsDateString } from 'class-validator';
 
-export class CreateReportDto { @IsString() @IsIn(['document_summary', 'user_activity', 'school_stats']) type: string;
+export class CreateReportDto { @IsString() @IsIn(['user_activity', 'document_uploads', 'notification_stats']) type: string;
 
 @IsString() @IsOptional() school_id?: string;
 
-@IsDateString() @IsOptional() start_date?: string;
+@IsDateString() @IsOptional() dateFrom?: string;
 
-@IsDateString() @IsOptional() end_date?: string;
-
-@IsString() @IsOptional() role_id?: string; }
+@IsDateString() @IsOptional() dateTo?: string; }
