@@ -26,6 +26,8 @@ model User {
   student       Student?
   teacher       Teacher?
   documents     Document[]
+  notifications Notification[] @relation("UserNotifications")
+  createdNotifications Notification[] @relation("NotificationCreator")
 }
 
 model Role {
@@ -37,6 +39,7 @@ model Role {
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
   userRoles       UserRole[]
+  notifications   Notification[] @relation("RoleNotifications")
 }
 
 model UserRole {
@@ -76,6 +79,7 @@ model School {
   students        Student[]
   teachers        Teacher[]
   documents       Document[]
+  notifications   Notification[] @relation("SchoolNotifications")
 }
 
 model SchoolUser {
@@ -133,4 +137,24 @@ model Document {
   updated_at      DateTime  @updatedAt
   user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   school          School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id              String    @id @default(uuid())
+  user_id         String?
+  school_id       String?
+  role_id         String?
+  title           String
+  message         String
+  status          String    @default("unread") // unread, read
+  type            String    @default("info")   // info, warning, error
+  resource_type   String?                      // e.g., Document, School
+  resource_id     String?                      // e.g., document ID
+  created_by      String                       // User who created the notification
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  user            User?     @relation("UserNotifications", fields: [user_id], references: [id], onDelete: Cascade)
+  school          School?   @relation("SchoolNotifications", fields: [school_id], references: [id], onDelete: Cascade)
+  role            Role?     @relation("RoleNotifications", fields: [role_id], references: [id], onDelete: SetNull)
+  creator         User      @relation("NotificationCreator", fields: [created_by], references: [id], onDelete: Cascade)
 }
