@@ -22,6 +22,11 @@ export class DocumentsController {
     @Request() req: RequestWithUser,
     @Body() dto: CreateDocumentDto,
   ) {
+    console.log('Received create document request:', {
+      user: req.user.sub,
+      dto: JSON.stringify(dto),
+      file: req.files?.file?.name,
+    });
     if (!req.files || !req.files.file) {
       throw new BadRequestException('File is required');
     }

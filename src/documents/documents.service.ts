@@ -16,27 +16,51 @@ export class DocumentsService {
 
   async createDocument(userId: string, dto: CreateDocumentDto, file: UploadedFile) {
     try {
-      console.log('Creating document with DTO:', dto, 'File:', file.name);
+      console.log('Creating document with DTO:', JSON.stringify(dto), 'File:', file?.name, 'File size:', file?.size);
       if (!dto.school_id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dto.school_id)) {
         throw new BadRequestException('Invalid school_id: Must be a valid UUID');
       }
-      await this.checkSchoolAccess(userId, dto.school_id);
+      if (!file || !file.data || file.size === 0) {
+        throw new BadRequestException('Invalid or empty file provided');
+      }
 
-      if (!file) throw new BadRequestException('File is required');
+      // Verify school and user exist
+      const school = await this.prisma.school.findUnique({ where: { id: dto.school_id } });
+      if (!school) throw new NotFoundException(`School with ID ${dto.school_id} not found`);
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new NotFoundException(`User with ID ${userId} not found`);
+
+      await this.checkSchoolAccess(userId, dto.school_id);
+      console.log('School access check passed for user:', userId);
 
       // Upload file to Supabase Storage
       const fileExtension = file.name.split('.').pop();
       const fileName = `${uuidv4()}.${fileExtension}`;
+      console.log('Uploading file to Supabase:', fileName, 'Bucket: documents', 'Path: school_' + dto.school_id);
       const { data, error } = await this.supabase.storage
         .from('documents')
         .upload(`school_${dto.school_id}/${fileName}`, file.data, {
           contentType: file.mimetype,
         });
 
-      console.log('Supabase storage upload response:', { data, error });
-      if (error) throw new BadRequestException(`Storage upload failed: ${error.message}`);
+      console.log('Supabase storage upload response:', { data: JSON.stringify(data), error: error?.message });
+      if (error) throw new InternalServerErrorException(`Storage upload failed: ${error.message}`);
+      if (!data) throw new InternalServerErrorException('Storage upload returned no data');
+
+      // Verify file exists in storage
+      const { data: listData, error: listError } = await this.supabase.storage
+        .from('documents')
+        .list(`school_${dto.school_id}`);
+      console.log('Supabase storage list response:', { listData: JSON.stringify(listData), listError: listError?.message });
+      if (listError) console.warn('Failed to list storage files:', listError.message);
 
       // Create document record in Prisma
+      console.log('Creating document in Prisma with:', {
+        school_id: dto.school_id,
+        user_id: userId,
+        title: dto.title,
+        file_url: `${process.env.SUPABASE_URL}/storage/v1/object/public/documents/school_${dto.school_id}/${fileName}`,
+      });
       const document = await this.prisma.document.create({
         data: {
           school_id: dto.school_id,
@@ -53,7 +77,7 @@ export class DocumentsService {
 
       return document;
     } catch (error) {
-      console.error('Error in createDocument:', error);
+      console.error('Error in createDocument:', error.message, error.stack);
       throw new InternalServerErrorException(`Failed to create document: ${error.message}`);
     }
   }
