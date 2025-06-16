@@ -28,6 +28,7 @@ model User {
   documents     Document[]
   notifications Notification[] @relation("UserNotifications")
   createdNotifications Notification[] @relation("NotificationCreator")
+  reports       Report[]      @relation("UserReports")
 }
 
 model Role {
@@ -157,4 +158,16 @@ model Notification {
   school          School?   @relation("SchoolNotifications", fields: [school_id], references: [id], onDelete: Cascade)
   role            Role?     @relation("RoleNotifications", fields: [role_id], references: [id], onDelete: SetNull)
   creator         User      @relation("NotificationCreator", fields: [created_by], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id              String    @id @default(uuid())
+  user_id         String
+  type            String    // document_summary, user_activity, school_stats
+  filters         Json?     // e.g., { school_id: "...", start_date: "...", end_date: "..." }
+  status          String    @default("pending") // pending, completed, failed
+  data            Json?     // Report results
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  user            User      @relation("UserReports", fields: [user_id], references: [id], onDelete: Cascade)
 }
