@@ -83,8 +83,14 @@ export class ReportsService {
 
     return {
       totalUsers: users.length,
-      roleCounts: users.reduce((acc, user) => ({ ...acc, [user.role]: (acc[user.role] || 0) + 1 }), {}),
-      statusCounts: users.reduce((acc, user) => ({ ...acc, [user.status]: (acc[user.status] || 0) + 1 }), {}),
+      roleCounts: users.reduce((acc: Record<string, number>, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      }, {}),
+      statusCounts: users.reduce((acc: Record<string, number>, user) => {
+        acc[user.status] = (acc[user.status] || 0) + 1;
+        return acc;
+      }, {}),
     };
   }
 
@@ -104,8 +110,14 @@ export class ReportsService {
 
     return {
       totalDocuments: documents.length,
-      fileTypeCounts: documents.reduce((acc, doc) => ({ ...acc, [doc.file_type]: (acc[doc.file_type] || 0) + 1 }), {}),
-      userUploadCounts: documents.reduce((acc, doc) => ({ ...acc, [doc.user_id]: (acc[doc.user_id] || 0) + 1 }), {}),
+      fileTypeCounts: documents.reduce((acc: Record<string, number>, doc) => {
+        acc[doc.file_type] = (acc[doc.file_type] || 0) + 1;
+        return acc;
+      }, {}),
+      userUploadCounts: documents.reduce((acc: Record<string, number>, doc) => {
+        acc[doc.user_id] = (acc[doc.user_id] || 0) + 1;
+        return acc;
+      }, {}),
     };
   }
 
@@ -125,8 +137,14 @@ export class ReportsService {
 
     return {
       totalNotifications: notifications.length,
-      typeCounts: notifications.reduce((acc, notif) => ({ ...acc, [notif.type]: (acc[notif.type] || 0) + 1 }), {}),
-      statusCounts: notifications.reduce((acc, notif) => ({ ...acc, [notif.status]: (acc[notif.status] || 0) + 1 }), {}),
+      typeCounts: notifications.reduce((acc: Record<string, number>, notif) => {
+        acc[notif.type] = (acc[notif.type] || 0) + 1;
+        return acc;
+      }, {}),
+      statusCounts: notifications.reduce((acc: Record<string, number>, notif) => {
+        acc[notif.status] = (acc[notif.status] || 0) + 1;
+        return acc;
+      }, {}),
     };
   }
 
