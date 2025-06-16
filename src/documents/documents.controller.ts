@@ -1,14 +1,14 @@
-import { Controller, Post, Body, Get, Param, Put, Query, UseGuards, Request, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Put, Query, UseGuards, Request, UseInterceptors, BadRequestException, HttpStatus } from '@nestjs/common';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { FileUploadInterceptor } from './file-upload.interceptor';
-import { UploadedFile } from 'express-fileupload';
+import { BusboyInterceptor } from './busboy.interceptor';
 
 interface RequestWithUser extends Request {
   user: { sub: string; role: string };
-  files?: { file: UploadedFile };
+  file?: { buffer: Buffer; originalname: string; mimetype: string; size: number };
+  body: CreateDocumentDto | any; // Allow flexibility for body parsing
 }
 
 @Controller('documents')
@@ -17,20 +17,23 @@ export class DocumentsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileUploadInterceptor)
-  async create(
-    @Request() req: RequestWithUser,
-    @Body() dto: CreateDocumentDto,
-  ) {
+  @UseInterceptors(BusboyInterceptor)
+  async create(@Request() req: RequestWithUser) {
     console.log('Received create document request:', {
       user: req.user.sub,
-      dto: JSON.stringify(dto),
-      file: req.files?.file?.name,
+      dto: JSON.stringify(req.body),
+      file: req.file?.originalname,
+      fileSize: req.file?.size,
     });
-    if (!req.files || !req.files.file) {
+    if (!req.file) {
       throw new BadRequestException('File is required');
     }
-    return this.documentsService.createDocument(req.user.sub, dto, req.files.file);
+    const document = await this.documentsService.createDocument(req.user.sub, req.body, req.file);
+    console.log('Returning created document:', JSON.stringify(document));
+    return {
+      statusCode: HttpStatus.OK,
+      data: document,
+    };
   }
 
   @Get(':id')
