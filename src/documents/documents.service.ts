@@ -159,7 +159,7 @@ export class DocumentsService {
       userId,
       'DOCUMENT_LISTED',
       'Document',
-      null,
+      undefined, // Fix: Changed null to undefined
       { school_id: schoolId, limit, offset },
     );
 
