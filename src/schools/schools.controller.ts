@@ -1,7 +1,10 @@
-import { Controller, Post, Body, Get, Param, Put, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Put, Delete, Query, UseGuards, Request, HttpStatus } from '@nestjs/common';
 import { SchoolsService } from './schools.service';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { UpdateSchoolDto } from './dto/update-school.dto';
+import { UpdateSchoolStatusDto } from './dto/update-school-status.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { SchoolFilterDto } from './dto/school-filter.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 interface RequestWithUser extends Request {
@@ -15,13 +18,30 @@ export class SchoolsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@Request() req: RequestWithUser, @Body() dto: CreateSchoolDto) {
-    return this.schoolsService.createSchool(req.user.sub, dto);
+    const school = await this.schoolsService.createSchool(req.user.sub, dto);
+    return { statusCode: HttpStatus.CREATED, data: school };
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  async getAll(
+    @Request() req: RequestWithUser,
+    @Query() paginationDto: PaginationDto,
+    @Query() filterDto: SchoolFilterDto,
+  ) {
+    const result = await this.schoolsService.getAllSchools(req.user.sub, paginationDto, filterDto);
+    return { 
+      statusCode: HttpStatus.OK, 
+      data: result.data,
+      pagination: result.pagination
+    };
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getById(@Request() req: RequestWithUser, @Param('id') id: string) {
-    return this.schoolsService.getSchoolById(id, req.user.sub);
+    const school = await this.schoolsService.getSchoolById(id, req.user.sub);
+    return { statusCode: HttpStatus.OK, data: school };
   }
 
   @Put(':id')
@@ -31,16 +51,25 @@ export class SchoolsController {
     @Param('id') id: string,
     @Body() dto: UpdateSchoolDto,
   ) {
-    return this.schoolsService.updateSchool(id, req.user.sub, dto);
+    const school = await this.schoolsService.updateSchool(id, req.user.sub, dto);
+    return { statusCode: HttpStatus.OK, data: school };
   }
 
-  @Get()
+  @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  async getAll(
+  async delete(@Request() req: RequestWithUser, @Param('id') id: string) {
+    await this.schoolsService.deleteSchool(id, req.user.sub);
+    return { statusCode: HttpStatus.OK, message: 'School deleted successfully' };
+  }
+
+  @Put(':id/status')
+  @UseGuards(JwtAuthGuard)
+  async updateStatus(
     @Request() req: RequestWithUser,
-    @Query('limit') limit = '10',
-    @Query('offset') offset = '0',
+    @Param('id') id: string,
+    @Body() dto: UpdateSchoolStatusDto,
   ) {
-    return this.schoolsService.getAllSchools(req.user.sub, parseInt(limit), parseInt(offset));
+    const school = await this.schoolsService.updateSchoolStatus(id, req.user.sub, dto);
+    return { statusCode: HttpStatus.OK, data: school };
   }
 }
