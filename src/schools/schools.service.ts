@@ -1,19 +1,30 @@
-import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { UpdateSchoolDto } from './dto/update-school.dto';
 import { UpdateSchoolStatusDto } from './dto/update-school-status.dto';
+import { UpdateSchoolSettingsDto } from './dto/school-settings.dto';
+import { UpdateSchoolBrandingDto } from './dto/school-branding.dto';
+import { UploadFileDto } from './dto/upload-file.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { SchoolFilterDto } from './dto/school-filter.dto';
 import { JwtService } from '@nestjs/jwt';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { 
+  SchoolDashboardStats, 
+  SchoolRevenueAnalytics, 
+  EnrollmentStatistics 
+} from './interfaces/school-stats.interface';
 
 @Injectable()
 export class SchoolsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    @Inject('SUPABASE_CLIENT') private readonly supabase: SupabaseClient,
   ) {}
 
+  // Existing methods (keeping original implementation)
   async createSchool(userId: string, dto: CreateSchoolDto) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !['super_admin', 'system_admin'].includes(user.role)) {
@@ -265,25 +276,132 @@ export class SchoolsService {
     return updatedSchool;
   }
 
-  private async checkSchoolAccess(userId: string, schoolId: string, allowedRoles: string[] = []) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-
-    // Super admins and system admins have access to all schools
-    if (['super_admin', 'system_admin'].includes(user.role)) return;
-
-    const schoolUser = await this.prisma.schoolUser.findUnique({
-      where: { 
-        user_id_school_id: { user_id: userId, school_id: schoolId } 
+  // NEW METHODS - School Configuration
+  async getSchoolSettings(schoolId: string, userId: string) {
+    await this.checkSchoolAccess(userId, schoolId);
+    
+    // For now, we'll store settings in a JSON field on the school table
+    // In a production app, you might want a separate settings table
+    const school = await this.prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { 
+        id: true, 
+        name: true,
+        // Add a settings JSON field to your school table in production
       },
     });
-
-    if (!schoolUser || schoolUser.status !== 'active') {
-      throw new ForbiddenException('No access to this school');
-    }
-
-    if (allowedRoles.length && !allowedRoles.includes(schoolUser.role)) {
-      throw new ForbiddenException('Insufficient permissions');
-    }
+    
+    if (!school) throw new NotFoundException('School not found');
+    
+    // Return default settings structure for now
+    return {
+      academic: {
+        academic_year_start: '2024-09-01',
+        academic_year_end: '2025-06-30',
+        terms_per_year: 3,
+        school_days_per_week: 5,
+        time_zone: 'UTC',
+      },
+      notifications: {
+        email_notifications: true,
+        sms_notifications: false,
+        push_notifications: true,
+        parent_notifications: true,
+      },
+      security: {
+        two_factor_auth_required: false,
+        password_expiry_days: 90,
+        max_login_attempts: 5,
+        ip_restriction_enabled: false,
+        allowed_ip_addresses: [],
+      },
+      custom_fields: {},
+    };
   }
-}
+
+  async updateSchoolSettings(schoolId: string, userId: string, dto: UpdateSchoolSettingsDto) {
+    await this.checkSchoolAccess(userId, schoolId, ['school_admin', 'super_admin', 'system_admin']);
+    
+    const school = await this.prisma.school.findUnique({
+      where: { id: schoolId },
+    });
+    
+    if (!school) throw new NotFoundException('School not found');
+    
+    // In production, you would update the settings JSON field
+    // For now, we'll just return the updated settings
+    return {
+      id: schoolId,
+      settings: dto,
+      updated_at: new Date(),
+    };
+  }
+
+  async getSchoolBranding(schoolId: string, userId: string) {
+    await this.checkSchoolAccess(userId, schoolId);
+    
+    const school = await this.prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { 
+        id: true, 
+        name: true, 
+        logo_url: true,
+        // Add branding fields to your school table in production
+      },
+    });
+    
+    if (!school) throw new NotFoundException('School not found');
+    
+    // Return default branding structure
+    return {
+      primary_color: '#007bff',
+      secondary_color: '#6c757d',
+      accent_color: '#28a745',
+      font_family: 'Arial, sans-serif',
+      logo_url: school.logo_url,
+      banner_url: null,
+      favicon_url: null,
+      custom_css: {},
+    };
+  }
+
+  async updateSchoolBranding(schoolId: string, userId: string, dto: UpdateSchoolBrandingDto) {
+    await this.checkSchoolAccess(userId, schoolId, ['school_admin', 'super_admin', 'system_admin']);
+    
+    const school = await this.prisma.school.findUnique({
+      where: { id: schoolId },
+    });
+    
+    if (!school) throw new NotFoundException('School not found');
+    
+    // Update logo_url if provided
+    if (dto.logo_url) {
+      await this.prisma.school.update({
+        where: { id: schoolId },
+        data: { logo_url: dto.logo_url },
+      });
+    }
+    
+    return {
+      id: schoolId,
+      branding: dto,
+      updated_at: new Date(),
+    };
+  }
+
+  async uploadSchoolLogo(
+    schoolId: string, 
+    userId: string, 
+    file: Express.Multer.File, 
+    dto: UploadFileDto
+  ) {
+    await this.checkSchoolAccess(userId, schoolId, ['school_admin', 'super_admin', 'system_admin']);
+    
+    const school = await this.prisma.school.findUnique({
+      where: { id: schoolId },
+    });
+    
+    if (!school) throw new NotFoundException('School not found');
+    
+    // Upload to Supabase storage
+    const fileName = `schools/${schoolId}/logo-${Date
