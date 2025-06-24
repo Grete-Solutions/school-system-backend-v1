@@ -1,3 +1,5 @@
+import { IsString, IsOptional, IsObject } from 'class-validator';
+
 export class UpdateSchoolBrandingDto {
   @IsString()
   @IsOptional()
