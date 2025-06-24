@@ -34,7 +34,7 @@ export class AuthService {
         id: data.user.id,
         email: dto.email,
         password_hash: 'supabase-managed',
-        role: 'pending',
+        role: dto.role,
         status: 'pending',
         first_name: dto.first_name,
         last_name: dto.last_name,
@@ -50,7 +50,17 @@ export class AuthService {
       { email: user.email, role: user.role },
     );
 
-    return { user, token: this.generateToken(user.id, user.role) };
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role: user.role,
+        status: user.status,
+      },
+      token: this.generateToken(user.id, user.role),
+    };
   }
 
   async login(dto: LoginDto) {
@@ -64,27 +74,73 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: data.user.id },
+      include: {
+        schoolUsers: {
+          include: {
+            school: true,
+          },
+        },
+        student: true,
+        teacher: true,
+      },
     });
 
-    if (!user || user.status !== 'active') throw new UnauthorizedException('User not active');
+    if (!user || user.status !== 'active') {
+      throw new UnauthorizedException('User not active');
+    }
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: { last_login: new Date() },
     });
 
-    return { user, token: this.generateToken(user.id, user.role) };
+    await this.auditLogsService.createLog(
+      user.id,
+      'USER_LOGIN',
+      'User',
+      user.id,
+      { email: user.email },
+    );
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role: user.role,
+        status: user.status,
+        schools: user.schoolUsers.map(su => ({
+          id: su.school.id,
+          name: su.school.name,
+          role: su.role,
+        })),
+        profile: user.student || user.teacher,
+      },
+      token: this.generateToken(user.id, user.role),
+    };
   }
 
   async logout(userId: string) {
     const { error } = await this.supabase.auth.signOut();
     if (error) throw new BadRequestException(error.message);
+
+    await this.auditLogsService.createLog(
+      userId,
+      'USER_LOGOUT',
+      'User',
+      userId,
+      {},
+    );
+
     return { message: 'Logged out successfully' };
   }
 
   async refreshToken(userId: string, role: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.status !== 'active') throw new UnauthorizedException('Invalid user');
+    if (!user || user.status !== 'active') {
+      throw new UnauthorizedException('Invalid user');
+    }
     return { token: this.generateToken(user.id, user.role) };
   }
 
@@ -93,6 +149,22 @@ export class AuthService {
       redirectTo: 'http://localhost:3000/reset-password',
     });
     if (error) throw new BadRequestException(error.message);
+
+    // Log the password reset request
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    
+    if (user) {
+      await this.auditLogsService.createLog(
+        user.id,
+        'PASSWORD_RESET_REQUESTED',
+        'User',
+        user.id,
+        { email: dto.email },
+      );
+    }
+
     return { message: 'Password reset email sent' };
   }
 
@@ -108,27 +180,61 @@ export class AuthService {
 
     const { error } = await this.supabase.auth.updateUser({ password: dto.new_password });
     if (error) throw new BadRequestException(error.message);
+
+    await this.auditLogsService.createLog(
+      userId,
+      'PASSWORD_CHANGED',
+      'User',
+      userId,
+      {},
+    );
+
     return { message: 'Password changed successfully' };
   }
 
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        first_name: true,
-        last_name: true,
-        phone_number: true,
-        profile_image_url: true,
-        role: true,
-        status: true,
-        last_login: true,
-        created_at: true,
+      include: {
+        schoolUsers: {
+          include: {
+            school: true,
+          },
+        },
+        student: true,
+        teacher: true,
+        permissions: true,
+        roles: {
+          include: {
+            role: true,
+          },
+        },
       },
     });
+
     if (!user) throw new BadRequestException('User not found');
-    return user;
+
+    return {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      phone_number: user.phone_number,
+      profile_image_url: user.profile_image_url,
+      role: user.role,
+      status: user.status,
+      last_login: user.last_login,
+      created_at: user.created_at,
+      schools: user.schoolUsers.map(su => ({
+        id: su.school.id,
+        name: su.school.name,
+        role: su.role,
+        status: su.status,
+      })),
+      profile: user.student || user.teacher,
+      permissions: user.permissions,
+      roles: user.roles.map(ur => ur.role),
+    };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
@@ -141,7 +247,25 @@ export class AuthService {
         profile_image_url: dto.profile_image_url,
       },
     });
-    return user;
+
+    await this.auditLogsService.createLog(
+      userId,
+      'PROFILE_UPDATED',
+      'User',
+      userId,
+      { changes: dto },
+    );
+
+    return {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      phone_number: user.phone_number,
+      profile_image_url: user.profile_image_url,
+      role: user.role,
+      status: user.status,
+    };
   }
 
   private generateToken(userId: string, role: string) {
