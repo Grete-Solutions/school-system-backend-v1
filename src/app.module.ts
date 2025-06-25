@@ -11,6 +11,8 @@ import { RolesModule } from './roles/roles.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ReportsModule } from './reports/reports.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { AdminsModule } from './admins/admins.module';
+import { AcademicYearsModule } from './academic/academic-years.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     NotificationsModule,
     ReportsModule,
     AuditLogsModule,
+    AdminsModule,
+    AcademicYearsModule,
   ],
 })
 export class AppModule {}

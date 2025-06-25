@@ -83,6 +83,7 @@ model School {
   documents       Document[]
   notifications   Notification[] @relation("SchoolNotifications")
   reports         Report[]       @relation("SchoolReports")
+  academicYears   AcademicYear[] // Add this line to your existing School model
 }
 
 model SchoolUser {
@@ -185,4 +186,21 @@ model AuditLog {
   details         Json?     // Additional metadata
   created_at      DateTime  @default(now())
   user            User      @relation("UserAuditLogs", fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model AcademicYear {
+  id              String    @id @default(uuid())
+  school_id       String
+  name            String    // e.g., "2024-2025"
+  start_date      DateTime
+  end_date        DateTime
+  is_current      Boolean   @default(false)
+  status          String    @default("active") // active, inactive, completed
+  description     String?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  school          School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  
+  @@unique([school_id, name])
+  @@index([school_id, is_current])
 }
