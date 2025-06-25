@@ -18,9 +18,6 @@ export class CreateStudentDto {
   @IsOptional()
   phone_number?: string;
 
-  @IsUUID()
-  school_id: string;
-
   @IsString()
   student_id: string;
 
