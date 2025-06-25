@@ -83,7 +83,7 @@ model School {
   documents       Document[]
   notifications   Notification[] @relation("SchoolNotifications")
   reports         Report[]       @relation("SchoolReports")
-  academicYears   AcademicYear[] // Add this line to your existing School model
+  academicYears   AcademicYear[]
 }
 
 model SchoolUser {
@@ -200,6 +200,7 @@ model AcademicYear {
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
   school          School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  terms           Term[]    // Added this relation field
   
   @@unique([school_id, name])
   @@index([school_id, is_current])

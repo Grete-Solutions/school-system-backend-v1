@@ -23,6 +23,7 @@ import { ResponseInterceptor } from '../common/interceptors/response.interceptor
 import { HttpExceptionFilter } from '../common/filters/http-exception.filter';
 import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { ApiPaginatedResponse } from '../common/decorators/api-response.decorator';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -36,7 +37,7 @@ export class TermsController {
     @Body(ValidationPipe) createTermDto: CreateTermDto,
   ): Promise<ApiResponseDto<TermResponseDto>> {
     const term = await this.termsService.create(yearId, createTermDto);
-    return new ApiResponseDto(true, 'Term created successfully', term);
+    return new ApiResponseDto(true, 'Terms retrieved successfully', term);
   }
 
   @Get('academic-years/:yearId/terms')
@@ -44,9 +45,9 @@ export class TermsController {
   async findAll(
     @Param('yearId', ParseUUIDPipe) yearId: string,
     @Query(ValidationPipe) query: GetTermsQueryDto,
-  ) {
+  ): Promise<ApiResponseDto<PaginatedResponse<TermResponseDto>>> {
     const result = await this.termsService.findAll(yearId, query);
-    return new ApiResponseDto(true, 'Terms retrieved successfully', result.data, result.pagination);
+    return new ApiResponseDto(true, 'Terms retrieved successfully', result);
   }
 
   @Get('terms/:id')
