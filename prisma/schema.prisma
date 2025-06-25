@@ -8,217 +8,259 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password_hash String
-  role          String    @default("pending")
-  status        String    @default("pending")
-  first_name    String
-  last_name     String
-  phone_number  String?
-  profile_image_url String?
-  last_login    DateTime?
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-  permissions   UserPermission[]
-  roles         UserRole[]
-  schoolUsers   SchoolUser[]
-  student       Student?
-  teacher       Teacher?
-  documents     Document[]
-  notifications Notification[] @relation("UserNotifications")
-  createdNotifications Notification[] @relation("NotificationCreator")
-  reports       Report[]       @relation("UserReports")
-  auditLogs     AuditLog[]     @relation("UserAuditLogs")
+  id                   String           @id @default(uuid())
+  email                String           @unique
+  password_hash        String
+  role                 String           @default("pending")
+  status               String           @default("pending")
+  first_name           String
+  last_name            String
+  phone_number         String?
+  profile_image_url    String?
+  last_login           DateTime?
+  created_at           DateTime         @default(now())
+  updated_at           DateTime         @updatedAt
+  permissions          UserPermission[]
+  roles                UserRole[]
+  schoolUsers          SchoolUser[]
+  student              Student?
+  teacher              Teacher?
+  documents            Document[]
+  notifications        Notification[]   @relation("UserNotifications")
+  createdNotifications Notification[]   @relation("NotificationCreator")
+  reports              Report[]         @relation("UserReports")
+  auditLogs            AuditLog[]       @relation("UserAuditLogs")
+  classStudents        ClassStudent[]
 }
 
 model Role {
-  id              String    @id @default(uuid())
-  name            String    @unique
-  description     String?
-  permissions     Json?
-  is_system_role  Boolean   @default(false)
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  userRoles       UserRole[]
-  notifications   Notification[] @relation("RoleNotifications")
+  id             String         @id @default(uuid())
+  name           String         @unique
+  description    String?
+  permissions    Json?
+  is_system_role Boolean        @default(false)
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  userRoles      UserRole[]
+  notifications  Notification[] @relation("RoleNotifications")
 }
 
 model UserRole {
-  id            String    @id @default(uuid())
-  user_id       String
-  role_id       String
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  role          Role      @relation(fields: [role_id], references: [id])
+  id         String   @id @default(uuid())
+  user_id    String
+  role_id    String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [role_id], references: [id])
 }
 
 model UserPermission {
-  id              String    @id @default(uuid())
-  user_id         String
-  permission_key  String
-  resource_type   String?
-  resource_id     String?
-  granted_by      String?
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  user_id        String
+  permission_key String
+  resource_type  String?
+  resource_id    String?
+  granted_by     String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
   @@unique([user_id, permission_key, resource_type, resource_id])
 }
 
 model School {
-  id              String    @id @default(uuid())
-  name            String
-  address         String
-  phone_number    String?
-  email           String?   @unique
-  logo_url        String?
-  status          String    @default("active")
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  schoolUsers     SchoolUser[]
-  students        Student[]
-  teachers        Teacher[]
-  documents       Document[]
-  notifications   Notification[] @relation("SchoolNotifications")
-  reports         Report[]       @relation("SchoolReports")
-  academicYears   AcademicYear[]
+  id            String         @id @default(uuid())
+  name          String
+  address       String
+  phone_number  String?
+  email         String?        @unique
+  logo_url      String?
+  status        String         @default("active")
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  schoolUsers   SchoolUser[]
+  students      Student[]
+  teachers      Teacher[]
+  documents     Document[]
+  notifications Notification[] @relation("SchoolNotifications")
+  reports       Report[]       @relation("SchoolReports")
+  academicYears AcademicYear[]
+  classes       Class[]
 }
 
 model SchoolUser {
-  id              String    @id @default(uuid())
-  user_id         String
-  school_id       String
-  role            String    @default("member")
-  status          String    @default("active")
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  school          School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  user_id    String
+  school_id  String
+  role       String   @default("member")
+  status     String   @default("active")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  school     School   @relation(fields: [school_id], references: [id], onDelete: Cascade)
+
   @@unique([user_id, school_id])
 }
 
 model Student {
-  id              String    @id @default(uuid())
-  user_id         String    @unique
+  id              String         @id @default(uuid())
+  user_id         String         @unique
   school_id       String
-  student_id      String    @unique
+  student_id      String         @unique
   grade_level     String?
   enrollment_date DateTime?
-  status          String    @default("active")
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  school          School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  status          String         @default("active")
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+  user            User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  school          School         @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  classStudents   ClassStudent[]
 }
 
 model Teacher {
-  id              String    @id @default(uuid())
-  user_id         String    @unique
-  school_id       String
-  teacher_id      String    @unique
-  department      String?
-  hire_date       DateTime?
-  status          String    @default("active")
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  school          School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  id         String    @id @default(uuid())
+  user_id    String    @unique
+  school_id  String
+  teacher_id String    @unique
+  department String?
+  hire_date  DateTime?
+  status     String    @default("active")
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  school     School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  classes    Class[]
 }
 
 model Document {
-  id              String    @id @default(uuid())
-  school_id       String
-  user_id         String
-  title           String
-  description     String?
-  file_url        String
-  file_type       String
-  file_size       Int
-  status          String    @default("active")
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  school          School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  school_id   String
+  user_id     String
+  title       String
+  description String?
+  file_url    String
+  file_type   String
+  file_size   Int
+  status      String   @default("active")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  school      School   @relation(fields: [school_id], references: [id], onDelete: Cascade)
 }
 
 model Notification {
-  id              String    @id @default(uuid())
-  user_id         String?
-  school_id       String?
-  role_id         String?
-  title           String
-  message         String
-  status          String    @default("unread") // unread, read
-  type            String    @default("info")   // info, warning, error
-  resource_type   String?                      // e.g., Document, School
-  resource_id     String?                      // e.g., document ID
-  created_by      String                       // User who created the notification
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  user            User?     @relation("UserNotifications", fields: [user_id], references: [id], onDelete: Cascade)
-  school          School?   @relation("SchoolNotifications", fields: [school_id], references: [id], onDelete: Cascade)
-  role            Role?     @relation("RoleNotifications", fields: [role_id], references: [id], onDelete: SetNull)
-  creator         User      @relation("NotificationCreator", fields: [created_by], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  user_id       String?
+  school_id     String?
+  role_id       String?
+  title         String
+  message       String
+  status        String   @default("unread") // unread, read
+  type          String   @default("info") // info, warning, error
+  resource_type String? // e.g., Document, School
+  resource_id   String? // e.g., document ID
+  created_by    String // User who created the notification
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  user          User?    @relation("UserNotifications", fields: [user_id], references: [id], onDelete: Cascade)
+  school        School?  @relation("SchoolNotifications", fields: [school_id], references: [id], onDelete: Cascade)
+  role          Role?    @relation("RoleNotifications", fields: [role_id], references: [id], onDelete: SetNull)
+  creator       User     @relation("NotificationCreator", fields: [created_by], references: [id], onDelete: Cascade)
 }
 
 model Report {
-  id              String    @id @default(uuid())
-  user_id         String
-  school_id       String?
-  type            String    // e.g., user_activity, document_uploads, notification_stats
-  parameters      Json?     // e.g., { dateFrom: "2025-01-01", dateTo: "2025-12-31" }
-  data            Json      // Report results
-  status          String    @default("completed") // pending, completed, failed
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  user            User      @relation("UserReports", fields: [user_id], references: [id], onDelete: Cascade)
-  school          School?   @relation("SchoolReports", fields: [school_id], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  user_id    String
+  school_id  String?
+  type       String // e.g., user_activity, document_uploads, notification_stats
+  parameters Json? // e.g., { dateFrom: "2025-01-01", dateTo: "2025-12-31" }
+  data       Json // Report results
+  status     String   @default("completed") // pending, completed, failed
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User     @relation("UserReports", fields: [user_id], references: [id], onDelete: Cascade)
+  school     School?  @relation("SchoolReports", fields: [school_id], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {
-  id              String    @id @default(uuid())
-  user_id         String
-  action          String    // e.g., USER_CREATED, DOCUMENT_UPLOADED
-  resource_type   String    // e.g., User, Document, Notification
-  resource_id     String?   // ID of the affected resource
-  details         Json?     // Additional metadata
-  created_at      DateTime  @default(now())
-  user            User      @relation("UserAuditLogs", fields: [user_id], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  user_id       String
+  action        String // e.g., USER_CREATED, DOCUMENT_UPLOADED
+  resource_type String // e.g., User, Document, Notification
+  resource_id   String? // ID of the affected resource
+  details       Json? // Additional metadata
+  created_at    DateTime @default(now())
+  user          User     @relation("UserAuditLogs", fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model AcademicYear {
-  id              String    @id @default(uuid())
-  school_id       String
-  name            String    // e.g., "2024-2025"
-  start_date      DateTime
-  end_date        DateTime
-  is_current      Boolean   @default(false)
-  status          String    @default("active") // active, inactive, completed
-  description     String?
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  school          School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
-  terms           Term[]    // Added this relation field
-  
+  id          String   @id @default(uuid())
+  school_id   String
+  name        String // e.g., "2024-2025"
+  start_date  DateTime
+  end_date    DateTime
+  is_current  Boolean  @default(false)
+  status      String   @default("active") // active, inactive, completed
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  school      School   @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  terms       Term[]
+  classes     Class[]
+
   @@unique([school_id, name])
   @@index([school_id, is_current])
 }
 
 model Term {
-  id              String    @id @default(uuid())
+  id               String       @id @default(uuid())
   academic_year_id String
-  name            String    // e.g., "Fall 2024", "Spring 2025", "Term 1", "Semester 1"
-  start_date      DateTime
-  end_date        DateTime
-  is_current      Boolean   @default(false)
-  status          String    @default("active") // active, inactive, completed
-  description     String?
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  academicYear    AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
-  
+  name             String // e.g., "Fall 2024", "Spring 2025", "Term 1", "Semester 1"
+  start_date       DateTime
+  end_date         DateTime?
+  is_current       Boolean      @default(false)
+  status           String       @default("active") // active, inactive, completed
+  description      String?
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  academicYear     AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  classes          Class[]
+
   @@unique([academic_year_id, name])
   @@index([academic_year_id, is_current])
+}
+
+model Class {
+  id               String         @id @default(uuid())
+  school_id        String
+  academic_year_id String
+  teacher_id       String?
+  term_id          String?
+  name             String // e.g., "Math 101", "Grade 9A"
+  description      String?
+  status           String         @default("active") // active, inactive
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+  school           School         @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  academicYear     AcademicYear   @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  teacher          Teacher?       @relation(fields: [teacher_id], references: [id], onDelete: SetNull)
+  term             Term?          @relation(fields: [term_id], references: [id], onDelete: SetNull)
+  classStudents    ClassStudent[]
+
+  @@unique([school_id, academic_year_id, name])
+  @@index([school_id, academic_year_id])
+}
+
+model ClassStudent {
+  id         String   @id @default(uuid())
+  class_id   String
+  student_id String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  class      Class    @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  student    Student  @relation(fields: [student_id], references: [id], onDelete: Cascade, map: "class_student_student_id_fk")
+  user       User     @relation(fields: [student_id], references: [id], onDelete: Cascade, map: "class_student_user_id_fk")
+
+  @@unique([class_id, student_id])
 }
