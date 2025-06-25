@@ -65,7 +65,7 @@ export class TeachersService {
         const teacher = await tx.teacher.create({
           data: {
             user_id: user.id,
-            school_id: dto.school_id,
+            school_id: dto.school_id!, // Use non-null assertion since we validated above
             teacher_id: dto.teacher_id,
             department: dto.department,
             hire_date: dto.hire_date ? new Date(dto.hire_date) : null,
@@ -76,7 +76,7 @@ export class TeachersService {
         const schoolUser = await tx.schoolUser.create({
           data: {
             user_id: user.id,
-            school_id: dto.school_id,
+            school_id: dto.school_id!, // Use non-null assertion since we validated above
             role: 'teacher',
             status: 'active',
           },
@@ -157,7 +157,12 @@ export class TeachersService {
       orderBy,
     });
 
-    const pagination = PaginationUtil.calculatePagination(totalRecords, page, limit);
+    const paginationMeta = PaginationUtil.calculatePagination(totalRecords, page, limit);
+    const pagination = {
+      ...paginationMeta,
+      hasNextPage: page < paginationMeta.totalPages,
+      hasPreviousPage: page > 1,
+    };
 
     return {
       data: teachers,
@@ -327,7 +332,12 @@ export class TeachersService {
 
     // TODO: Implement when Class model is available
     // For now, return empty paginated response
-    const pagination = PaginationUtil.calculatePagination(0, page, limit);
+    const paginationMeta = PaginationUtil.calculatePagination(0, page, limit);
+    const pagination = {
+      ...paginationMeta,
+      hasNextPage: page < paginationMeta.totalPages,
+      hasPreviousPage: page > 1,
+    };
 
     return {
       data: [],
@@ -389,7 +399,12 @@ export class TeachersService {
       orderBy,
     });
 
-    const pagination = PaginationUtil.calculatePagination(totalRecords, page, limit);
+    const paginationMeta = PaginationUtil.calculatePagination(totalRecords, page, limit);
+    const pagination = {
+      ...paginationMeta,
+      hasNextPage: page < paginationMeta.totalPages,
+      hasPreviousPage: page > 1,
+    };
 
     return {
       data: students,
