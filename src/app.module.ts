@@ -15,6 +15,7 @@ import { AdminsModule } from './admins/admins.module';
 import { AcademicYearsModule } from './academic/academic-years.module';
 import { TermsModule } from './academic/terms.module';
 import { ProgramsModule } from './programs/programs.module';
+import { CoursesModule } from './courses/courses.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ProgramsModule } from './programs/programs.module';
     AcademicYearsModule,
     TermsModule,
     ProgramsModule,
+    CoursesModule,
   ],
 })
 export class AppModule {}
