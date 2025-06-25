@@ -14,7 +14,7 @@ export class TermsService {
       academic_year_id: term.academic_year_id,
       name: term.name,
       start_date: term.start_date.toISOString(),
-      end_date: term.end_date.toISOString(),
+      end_date: term.end_date?.toISOString() || '',
       is_current: term.is_current,
       status: term.status,
       description: term.description,
@@ -191,6 +191,11 @@ export class TermsService {
     if (dto.start_date || dto.end_date) {
       const startDate = dto.start_date ? new Date(dto.start_date) : existingTerm.start_date;
       const endDate = dto.end_date ? new Date(dto.end_date) : existingTerm.end_date;
+      
+      // Check if endDate is null
+      if (!endDate) {
+        throw new BadRequestException('End date is required');
+      }
       
       if (endDate <= startDate) {
         throw new BadRequestException('End date must be after start date');

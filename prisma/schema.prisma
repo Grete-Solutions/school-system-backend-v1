@@ -87,6 +87,8 @@ model School {
   reports       Report[]       @relation("SchoolReports")
   academicYears AcademicYear[]
   classes       Class[]
+  programs      Program[]
+  courses       Course[] 
 }
 
 model SchoolUser {
@@ -131,6 +133,7 @@ model Teacher {
   user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   school     School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
   classes    Class[]
+  courses    Course[]
 }
 
 model Document {
@@ -247,6 +250,7 @@ model Class {
   teacher          Teacher?       @relation(fields: [teacher_id], references: [id], onDelete: SetNull)
   term             Term?          @relation(fields: [term_id], references: [id], onDelete: SetNull)
   classStudents    ClassStudent[]
+  classCourses     ClassCourse[]
 
   @@unique([school_id, academic_year_id, name])
   @@index([school_id, academic_year_id])
@@ -263,4 +267,57 @@ model ClassStudent {
   user       User     @relation(fields: [student_id], references: [id], onDelete: Cascade, map: "class_student_user_id_fk")
 
   @@unique([class_id, student_id])
+}
+
+
+model Program {
+  id          String   @id @default(uuid())
+  school_id   String
+  name        String
+  description String?
+  code        String? // Program code like "CS101", "MATH-ADV"
+  duration    String? // e.g., "4 years", "2 semesters"
+  status      String   @default("active") // active, inactive, archived
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  school      School   @relation(fields: [school_id], references: [id], onDelete: Cascade)
+
+  @@unique([school_id, code])
+  @@unique([school_id, name])
+  @@index([school_id, status])
+}
+
+model Course {
+  id             String        @id @default(uuid())
+  school_id      String
+  teacher_id     String?
+  name           String
+  code           String? // e.g., "MATH101", "ENG201"
+  description    String?
+  credits        Int?          @default(0)
+  department     String?
+  grade_level    String?       // e.g., "9", "10", "11", "12" or "Elementary", "Middle", "High"
+  prerequisites  String?       // JSON string of prerequisite course IDs
+  status         String        @default("active") // active, inactive, archived
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+  school         School        @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  teacher        Teacher?      @relation(fields: [teacher_id], references: [id], onDelete: SetNull)
+  classCourses   ClassCourse[]
+
+  @@unique([school_id, code])
+  @@index([school_id, department])
+  @@index([school_id, grade_level])
+}
+
+model ClassCourse {
+  id         String   @id @default(uuid())
+  class_id   String
+  course_id  String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  class      Class    @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([class_id, course_id])
 }
