@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
-import { CreateAcademicYearDto, UpdateAcademicYearDto, GetAcademicYearsQueryDto } from './dto/academic-years.dto';
+import { CreateAcademicYearDto, UpdateAcademicYearDto, GetAcademicYearsQueryDto, AcademicYearResponseDto } from './dto/academic-years.dto';
 import { PaginationUtil } from '../common/utils/pagination.util';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 
@@ -8,7 +8,22 @@ import { PaginatedResponse } from '../common/interfaces/paginated-response.inter
 export class AcademicYearsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(schoolId: string, dto: CreateAcademicYearDto) {
+  private transformToResponseDto(academicYear: any): AcademicYearResponseDto {
+    return {
+      id: academicYear.id,
+      school_id: academicYear.school_id,
+      name: academicYear.name,
+      start_date: academicYear.start_date.toISOString(),
+      end_date: academicYear.end_date.toISOString(),
+      is_current: academicYear.is_current,
+      status: academicYear.status,
+      description: academicYear.description,
+      created_at: academicYear.created_at.toISOString(),
+      updated_at: academicYear.updated_at.toISOString(),
+    };
+  }
+
+  async create(schoolId: string, dto: CreateAcademicYearDto): Promise<AcademicYearResponseDto> {
     // Validate that end_date is after start_date
     const startDate = new Date(dto.start_date);
     const endDate = new Date(dto.end_date);
@@ -44,13 +59,13 @@ export class AcademicYearsService {
         },
       });
 
-      return academicYear;
+      return this.transformToResponseDto(academicYear);
     } catch (error) {
       throw new BadRequestException('Failed to create academic year');
     }
   }
 
-  async findAll(schoolId: string, query: GetAcademicYearsQueryDto): Promise<PaginatedResponse<any>> {
+  async findAll(schoolId: string, query: GetAcademicYearsQueryDto): Promise<PaginatedResponse<AcademicYearResponseDto>> {
     const { page, limit } = PaginationUtil.validatePaginationParams(query.page, query.limit);
     const { skip, take } = PaginationUtil.getPaginationParams(page, limit);
 
@@ -85,12 +100,12 @@ export class AcademicYearsService {
     };
 
     return {
-      data: academicYears,
+      data: academicYears.map(year => this.transformToResponseDto(year)),
       pagination,
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<AcademicYearResponseDto & { school?: { id: string; name: string } }> {
     const academicYear = await this.prisma.academicYear.findUnique({
       where: { id },
       include: {
@@ -107,16 +122,26 @@ export class AcademicYearsService {
       throw new NotFoundException('Academic year not found');
     }
 
-    return academicYear;
+    const transformed = this.transformToResponseDto(academicYear);
+    return {
+      ...transformed,
+      school: academicYear.school,
+    };
   }
 
-  async update(id: string, dto: UpdateAcademicYearDto) {
-    const existingAcademicYear = await this.findOne(id);
+  async update(id: string, dto: UpdateAcademicYearDto): Promise<AcademicYearResponseDto> {
+    const existingAcademicYear = await this.prisma.academicYear.findUnique({
+      where: { id },
+    });
+
+    if (!existingAcademicYear) {
+      throw new NotFoundException('Academic year not found');
+    }
 
     // Validate dates if provided
     if (dto.start_date || dto.end_date) {
-      const startDate = dto.start_date ? new Date(dto.start_date) : new Date(existingAcademicYear.start_date);
-      const endDate = dto.end_date ? new Date(dto.end_date) : new Date(existingAcademicYear.end_date);
+      const startDate = dto.start_date ? new Date(dto.start_date) : existingAcademicYear.start_date;
+      const endDate = dto.end_date ? new Date(dto.end_date) : existingAcademicYear.end_date;
       
       if (endDate <= startDate) {
         throw new BadRequestException('End date must be after start date');
@@ -166,14 +191,20 @@ export class AcademicYearsService {
         data: updateData,
       });
 
-      return academicYear;
+      return this.transformToResponseDto(academicYear);
     } catch (error) {
       throw new BadRequestException('Failed to update academic year');
     }
   }
 
   async remove(id: string) {
-    const academicYear = await this.findOne(id);
+    const academicYear = await this.prisma.academicYear.findUnique({
+      where: { id },
+    });
+
+    if (!academicYear) {
+      throw new NotFoundException('Academic year not found');
+    }
 
     try {
       await this.prisma.academicYear.delete({
@@ -186,8 +217,14 @@ export class AcademicYearsService {
     }
   }
 
-  async setCurrent(id: string) {
-    const academicYear = await this.findOne(id);
+  async setCurrent(id: string): Promise<AcademicYearResponseDto> {
+    const academicYear = await this.prisma.academicYear.findUnique({
+      where: { id },
+    });
+
+    if (!academicYear) {
+      throw new NotFoundException('Academic year not found');
+    }
 
     // Unset current status for other academic years in the same school
     await this.prisma.academicYear.updateMany({
@@ -205,10 +242,10 @@ export class AcademicYearsService {
       data: { is_current: true },
     });
 
-    return updatedAcademicYear;
+    return this.transformToResponseDto(updatedAcademicYear);
   }
 
-  async getCurrentAcademicYear(schoolId: string) {
+  async getCurrentAcademicYear(schoolId: string): Promise<AcademicYearResponseDto> {
     const currentAcademicYear = await this.prisma.academicYear.findFirst({
       where: { 
         school_id: schoolId, 
@@ -220,6 +257,6 @@ export class AcademicYearsService {
       throw new NotFoundException('No current academic year found for this school');
     }
 
-    return currentAcademicYear;
+    return this.transformToResponseDto(currentAcademicYear);
   }
 }

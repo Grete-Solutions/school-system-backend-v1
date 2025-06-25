@@ -204,3 +204,20 @@ model AcademicYear {
   @@unique([school_id, name])
   @@index([school_id, is_current])
 }
+
+model Term {
+  id              String    @id @default(uuid())
+  academic_year_id String
+  name            String    // e.g., "Fall 2024", "Spring 2025", "Term 1", "Semester 1"
+  start_date      DateTime
+  end_date        DateTime
+  is_current      Boolean   @default(false)
+  status          String    @default("active") // active, inactive, completed
+  description     String?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  academicYear    AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  
+  @@unique([academic_year_id, name])
+  @@index([academic_year_id, is_current])
+}

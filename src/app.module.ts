@@ -13,6 +13,7 @@ import { ReportsModule } from './reports/reports.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { AdminsModule } from './admins/admins.module';
 import { AcademicYearsModule } from './academic/academic-years.module';
+import { TermsModule } from './academic/terms.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { AcademicYearsModule } from './academic/academic-years.module';
     AuditLogsModule,
     AdminsModule,
     AcademicYearsModule,
+    TermsModule,
   ],
 })
 export class AppModule {}
