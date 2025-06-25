@@ -1,7 +1,20 @@
-import { IsOptional, IsString, IsIn } from 'class-validator';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { IsOptional, IsString, IsInt, Min, Max, IsIn } from 'class-validator';
+import { Transform } from 'class-transformer';
 
-export class CourseQueryDto extends PaginationDto {
+export class CourseQueryDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Transform(({ value }) => parseInt(value))
+  page?: number = 1;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  @Transform(({ value }) => parseInt(value))
+  limit?: number = 10;
+
   @IsOptional()
   @IsString()
   department?: string;
@@ -17,9 +30,19 @@ export class CourseQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   @IsIn(['active', 'inactive', 'archived'])
-  status?: string;
+  status?: string = 'active';
 
   @IsOptional()
   @IsString()
-  search?: string; // Search in name, code, or description
+  search?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['name', 'code', 'department', 'grade_level', 'credits', 'created_at', 'updated_at', 'teacher'])
+  sortBy?: string = 'name';
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: string = 'asc';
 }

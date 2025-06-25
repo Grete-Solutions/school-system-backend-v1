@@ -20,10 +20,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
-@ApiTags('courses')
-@ApiBearerAuth()
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CoursesController {
@@ -31,8 +28,6 @@ export class CoursesController {
 
   @Get('schools/:schoolId/courses')
   @Roles('admin', 'school_admin', 'teacher')
-  @ApiOperation({ summary: 'Get all courses for a school' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Courses retrieved successfully' })
   async getSchoolCourses(
     @Param('schoolId', ParseUUIDPipe) schoolId: string,
     @Query() query: CourseQueryDto,
@@ -43,8 +38,6 @@ export class CoursesController {
 
   @Post('schools/:schoolId/courses')
   @Roles('admin', 'school_admin')
-  @ApiOperation({ summary: 'Create a new course' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Course created successfully' })
   async createCourse(
     @Param('schoolId', ParseUUIDPipe) schoolId: string,
     @Body() createCourseDto: CreateCourseDto,
@@ -55,8 +48,6 @@ export class CoursesController {
 
   @Get('courses/:id')
   @Roles('admin', 'school_admin', 'teacher', 'student')
-  @ApiOperation({ summary: 'Get course details' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Course retrieved successfully' })
   async getCourse(
     @Param('id', ParseUUIDPipe) id: string,
     @GetUser() user: any,
@@ -66,8 +57,6 @@ export class CoursesController {
 
   @Put('courses/:id')
   @Roles('admin', 'school_admin')
-  @ApiOperation({ summary: 'Update course' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Course updated successfully' })
   async updateCourse(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateCourseDto: UpdateCourseDto,
@@ -78,8 +67,6 @@ export class CoursesController {
 
   @Delete('courses/:id')
   @Roles('admin', 'school_admin')
-  @ApiOperation({ summary: 'Delete course' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Course deleted successfully' })
   async deleteCourse(
     @Param('id', ParseUUIDPipe) id: string,
     @GetUser() user: any,
@@ -89,8 +76,6 @@ export class CoursesController {
 
   @Get('classes/:classId/courses')
   @Roles('admin', 'school_admin', 'teacher', 'student')
-  @ApiOperation({ summary: 'Get courses for a class' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Class courses retrieved successfully' })
   async getClassCourses(
     @Param('classId', ParseUUIDPipe) classId: string,
     @Query() query: CourseQueryDto,
@@ -101,8 +86,6 @@ export class CoursesController {
 
   @Post('classes/:classId/courses')
   @Roles('admin', 'school_admin', 'teacher')
-  @ApiOperation({ summary: 'Assign course to class' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Course assigned to class successfully' })
   async assignCourseToClass(
     @Param('classId', ParseUUIDPipe) classId: string,
     @Body() assignCourseDto: AssignCourseDto,

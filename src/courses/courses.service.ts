@@ -51,13 +51,8 @@ export class CoursesService {
       }),
     };
 
-    // Build orderBy clause
-    const orderBy: Prisma.CourseOrderByWithRelationInput = {};
-    if (sortBy === 'teacher') {
-      orderBy.teacher = { user: { first_name: sortOrder } };
-    } else {
-      orderBy[sortBy] = sortOrder;
-    }
+    // Build orderBy clause with proper type safety
+    const orderBy: Prisma.CourseOrderByWithRelationInput = this.buildOrderBy(sortBy, sortOrder);
 
     const [courses, totalRecords] = await Promise.all([
       this.prisma.course.findMany({
@@ -377,13 +372,8 @@ export class CoursesService {
       }),
     };
 
-    // Build orderBy clause
-    const orderBy: Prisma.CourseOrderByWithRelationInput = {};
-    if (sortBy === 'teacher') {
-      orderBy.teacher = { user: { first_name: sortOrder } };
-    } else {
-      orderBy[sortBy] = sortOrder;
-    }
+    // Build orderBy clause with proper type safety
+    const orderBy: Prisma.CourseOrderByWithRelationInput = this.buildOrderBy(sortBy, sortOrder);
 
     const [classCourses, totalRecords] = await Promise.all([
       this.prisma.classCourse.findMany({
@@ -432,7 +422,7 @@ export class CoursesService {
     const totalPages = Math.ceil(totalRecords / take);
 
     return {
-      data: classCourses.map((cc) => cc.course),
+      data: classCourses.map((cc: { course: any }) => cc.course),
       pagination: {
         totalRecords,
         totalPages,
@@ -522,6 +512,34 @@ export class CoursesService {
       message: 'Course assigned to class successfully',
       data: classCourse,
     };
+  }
+
+  /**
+   * Helper method to build type-safe orderBy clause
+   */
+  private buildOrderBy(sortBy: string, sortOrder: string): Prisma.CourseOrderByWithRelationInput {
+    const order = sortOrder === 'desc' ? 'desc' : 'asc';
+
+    switch (sortBy) {
+      case 'name':
+        return { name: order };
+      case 'code':
+        return { code: order };
+      case 'department':
+        return { department: order };
+      case 'grade_level':
+        return { grade_level: order };
+      case 'credits':
+        return { credits: order };
+      case 'created_at':
+        return { created_at: order };
+      case 'updated_at':
+        return { updated_at: order };
+      case 'teacher':
+        return { teacher: { user: { first_name: order } } };
+      default:
+        return { name: order }; // Default fallback
+    }
   }
 
   private async verifySchoolAccess(schoolId: string, user: any) {

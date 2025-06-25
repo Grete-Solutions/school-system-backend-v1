@@ -1,41 +1,42 @@
-import { IsString, IsOptional, IsNotEmpty, IsInt, Min, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateCourseDto {
   @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
+  @MaxLength(255)
   name: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   @MaxLength(20)
   code?: string;
 
-  @IsString()
   @IsOptional()
-  @MaxLength(500)
+  @IsString()
+  @MaxLength(1000)
   description?: string;
 
-  @IsInt()
   @IsOptional()
+  @IsInt()
   @Min(0)
+  @Transform(({ value }) => parseInt(value))
   credits?: number;
 
-  @IsString()
   @IsOptional()
-  @MaxLength(50)
+  @IsString()
+  @MaxLength(100)
   department?: string;
 
-  @IsString()
   @IsOptional()
-  @MaxLength(20)
+  @IsString()
+  @MaxLength(50)
   grade_level?: string;
 
-  @IsString()
   @IsOptional()
-  teacher_id?: string;
+  @IsString()
+  prerequisites?: string;
 
-  @IsString()
   @IsOptional()
-  prerequisites?: string; // JSON string of prerequisite course IDs
+  @IsString()
+  teacher_id?: string;
 }

@@ -1,7 +1,7 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsUUID } from 'class-validator';
 
 export class AssignCourseDto {
   @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   courseId: string;
 }
