@@ -264,8 +264,21 @@ export class GradesService {
 
     await this.verifySchoolAccess(grade.assessment.school.id, user);
 
+    // Type-safe update data with proper Prisma types
+    const updateData: Prisma.GradeUpdateInput = {
+      ...(updateGradeDto.student_id !== undefined && { student_id: updateGradeDto.student_id }),
+      ...(updateGradeDto.assessment_id !== undefined && { assessment_id: updateGradeDto.assessment_id }),
+      ...(updateGradeDto.points_earned !== undefined && { points_earned: updateGradeDto.points_earned }),
+      ...(updateGradeDto.points_possible !== undefined && { points_possible: updateGradeDto.points_possible }),
+      ...(updateGradeDto.letter_grade !== undefined && { letter_grade: updateGradeDto.letter_grade }),
+      ...(updateGradeDto.status !== undefined && { status: updateGradeDto.status }),
+      ...(updateGradeDto.feedback !== undefined && { feedback: updateGradeDto.feedback }),
+      ...(updateGradeDto.class_id !== undefined && { class_id: updateGradeDto.class_id }),
+      ...(updateGradeDto.course_id !== undefined && { course_id: updateGradeDto.course_id }),
+      ...(updateGradeDto.term_id !== undefined && { term_id: updateGradeDto.term_id }),
+    };
+
     // Recalculate percentage if points changed
-    let updateData = { ...updateGradeDto };
     if (updateGradeDto.points_earned !== undefined || updateGradeDto.points_possible !== undefined) {
       const points_earned = updateGradeDto.points_earned ?? grade.points_earned;
       const points_possible = updateGradeDto.points_possible ?? grade.points_possible;
@@ -274,7 +287,7 @@ export class GradesService {
       
       // Recalculate letter grade if not explicitly provided
       if (!updateGradeDto.letter_grade) {
-        updateData.letter_grade = this.calculateLetterGrade(updateData.percentage);
+        updateData.letter_grade = this.calculateLetterGrade(updateData.percentage as number);
       }
     }
 
@@ -431,14 +444,8 @@ export class GradesService {
     const updatePromises = gradeUpdates.map(async (gradeUpdate) => {
       const existingGrade = existingGrades.find(g => g.id === gradeUpdate.id);
       
-      // Create a type-safe update object
-      const updateData: Partial<{
-        points_earned: number;
-        letter_grade: string;
-        status: string;
-        feedback: string;
-        percentage: number;
-      }> = {
+      // Create a type-safe update object using Prisma types
+      const updateData: Prisma.GradeUpdateInput = {
         ...(gradeUpdate.points_earned !== undefined && { points_earned: gradeUpdate.points_earned }),
         ...(gradeUpdate.letter_grade !== undefined && { letter_grade: gradeUpdate.letter_grade }),
         ...(gradeUpdate.status !== undefined && { status: gradeUpdate.status }),
@@ -452,7 +459,7 @@ export class GradesService {
         
         // Recalculate letter grade if not explicitly provided
         if (!gradeUpdate.letter_grade) {
-          updateData.letter_grade = this.calculateLetterGrade(updateData.percentage);
+          updateData.letter_grade = this.calculateLetterGrade(updateData.percentage as number);
         }
       }
 
@@ -470,14 +477,15 @@ export class GradesService {
     };
   }
 
-  private buildOrderBy(sortBy: string, sortOrder: string) {
+  private buildOrderBy(sortBy: string, sortOrder: string): Prisma.GradeOrderByWithRelationInput {
     const validSortFields = ['points_earned', 'percentage', 'letter_grade', 'graded_at', 'created_at'];
     
     if (!validSortFields.includes(sortBy)) {
       return { graded_at: 'desc' };
     }
 
-    return { [sortBy]: sortOrder === 'asc' ? 'asc' : 'desc' };
+    const order = sortOrder === 'asc' ? 'asc' : 'desc';
+    return { [sortBy]: order } as Prisma.GradeOrderByWithRelationInput;
   }
 
   private calculateLetterGrade(percentage: number): string {
@@ -488,12 +496,12 @@ export class GradesService {
     return 'F';
   }
 
-  private calculateGradeDistribution(studentGrades: any[]) {
+  private calculateGradeDistribution(studentGrades: any[]): { A: number; B: number; C: number; D: number; F: number } {
     const distribution = { A: 0, B: 0, C: 0, D: 0, F: 0 };
     
     studentGrades.forEach(sg => {
-      const letterGrade = sg.summary.letterGrade;
-      if (distribution.hasOwnProperty(letterGrade)) {
+      const letterGrade = sg.summary.letterGrade as keyof typeof distribution;
+      if (letterGrade in distribution) {
         distribution[letterGrade]++;
       }
     });
