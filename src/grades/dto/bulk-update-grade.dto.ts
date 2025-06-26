@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsNumber, Min, IsIn, IsArray, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer'; // Add Transform import
 
 export class GradeUpdateItem {
   @IsString()
@@ -8,7 +8,7 @@ export class GradeUpdateItem {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  @Transform(({ value }) => parseFloat(value))
+  @Transform(({ value }) => parseFloat(value)) // Now Transform is imported
   points_earned?: number;
 
   @IsOptional()

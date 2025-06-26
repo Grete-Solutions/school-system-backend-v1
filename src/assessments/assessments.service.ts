@@ -344,7 +344,7 @@ export class AssessmentsService {
       data: {
         ...createAssessmentDto,
         school_id: schoolId,
-        teacher_id: teacher?.id || null,
+        teacher_id: teacher?.id ? teacher.id : undefined,
         due_date: createAssessmentDto.due_date ? new Date(createAssessmentDto.due_date) : null,
       },
       include: {
@@ -706,7 +706,7 @@ export class AssessmentsService {
           data: {
             ...assessment,
             school_id: schoolId,
-            teacher_id: teacher?.id || null,
+            teacher_id: teacher?.id ? teacher.id : undefined,
             due_date: assessment.due_date ? new Date(assessment.due_date) : null,
           },
           include: {
