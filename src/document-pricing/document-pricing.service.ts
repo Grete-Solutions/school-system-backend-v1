@@ -5,12 +5,12 @@ import {
   ConflictException,
   Logger 
 } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
+import { PrismaService } from './../prisma/prisma.service';
 import { CreateDocumentPricingDto } from './dto/create-document-pricing.dto';
 import { UpdateDocumentPricingDto } from './dto/update-document-pricing.dto';
 import { DocumentPricingQueryDto } from './dto/document-pricing-query.dto';
-import { PaginationUtil } from '../../common/utils/pagination.util';
-import { PaginatedResponse } from '../../common/interfaces/paginated-response.interface';
+import { PaginationUtil } from './../common/utils/pagination.util';
+import { PaginatedResponse } from './../common/interfaces/paginated-response.interface';
 import { DocumentPricingResponseDto } from './dto/document-pricing-response.dto';
 
 @Injectable()

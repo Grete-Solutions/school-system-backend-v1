@@ -25,9 +25,9 @@ import { CreateDocumentPricingDto } from './dto/create-document-pricing.dto';
 import { UpdateDocumentPricingDto } from './dto/update-document-pricing.dto';
 import { DocumentPricingQueryDto } from './dto/document-pricing-query.dto';
 import { DocumentPricingResponseDto } from './dto/document-pricing-response.dto';
-import { ApiResponseDto } from '../../common/dto/api-response.dto';
-import { ApiPaginatedResponse } from '../../common/decorators/api-response.decorator';
-import { PaginatedResponse } from '../../common/interfaces/paginated-response.interface';
+import { ApiResponseDto } from './../common/dto/api-response.dto';
+import { ApiPaginatedResponse } from './../common/decorators/api-response.decorator';
+import { PaginatedResponse } from './../common/interfaces/paginated-response.interface';
 
 @ApiTags('Document Pricing')
 @ApiBearerAuth()
@@ -183,4 +183,167 @@ export class DocumentPricingController {
   @ApiParam({ name: 'id', description: 'Document pricing ID', type: 'string' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Document pricing
+    description: 'Document pricing updated successfully',
+    type: DocumentPricingResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Document pricing not found'
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input data'
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Active pricing already exists for this document type'
+  })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateDocumentPricingDto: UpdateDocumentPricingDto,
+    @Request() req: any,
+  ): Promise<ApiResponseDto<DocumentPricingResponseDto>> {
+    const userId = req.user?.id || req.user?.sub;
+    const result = await this.documentPricingService.update(id, updateDocumentPricingDto, userId);
+    
+    return new ApiResponseDto(
+      true,
+      'Document pricing updated successfully',
+      result
+    );
+  }
+
+  @Delete('document-pricing/:id')
+  @ApiOperation({ 
+    summary: 'Delete a document pricing rule',
+    description: 'Permanently deletes a document pricing rule'
+  })
+  @ApiParam({ name: 'id', description: 'Document pricing ID', type: 'string' })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'Document pricing deleted successfully'
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Document pricing not found'
+  })
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ApiResponseDto<null>> {
+    await this.documentPricingService.remove(id);
+    
+    return new ApiResponseDto(
+      true,
+      'Document pricing deleted successfully',
+      null
+    );
+  }
+
+  // Additional utility endpoints
+
+  @Get('document-pricing/types/list')
+  @ApiOperation({ 
+    summary: 'Get available document types',
+    description: 'Retrieves a list of all document types that have pricing configured'
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Document types retrieved successfully'
+  })
+  async getDocumentTypes(): Promise<ApiResponseDto<string[]>> {
+    const result = await this.documentPricingService.getDocumentTypes();
+    
+    return new ApiResponseDto(
+      true,
+      'Document types retrieved successfully',
+      result
+    );
+  }
+
+  @Get('document-pricing/pricing/:documentType')
+  @ApiOperation({ 
+    summary: 'Get active pricing for a document type',
+    description: 'Retrieves active pricing for a specific document type, with optional school context'
+  })
+  @ApiParam({ name: 'documentType', description: 'Document type', type: 'string' })
+  @ApiQuery({ name: 'school_id', required: false, type: String, description: 'School ID for school-specific pricing' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Active pricing retrieved successfully',
+    type: DocumentPricingResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'No active pricing found for this document type'
+  })
+  async getActivePricing(
+    @Param('documentType') documentType: string,
+    @Query('school_id') schoolId?: string,
+  ): Promise<ApiResponseDto<DocumentPricingResponseDto>> {
+    const result = await this.documentPricingService.getActivePricing(documentType, schoolId);
+    
+    return new ApiResponseDto(
+      true,
+      'Active pricing retrieved successfully',
+      result
+    );
+  }
+
+  @Post('document-pricing/:id/deactivate')
+  @ApiOperation({ 
+    summary: 'Deactivate a document pricing rule',
+    description: 'Deactivates a document pricing rule without deleting it'
+  })
+  @ApiParam({ name: 'id', description: 'Document pricing ID', type: 'string' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Document pricing deactivated successfully',
+    type: DocumentPricingResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Document pricing not found'
+  })
+  async deactivate(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ApiResponseDto<DocumentPricingResponseDto>> {
+    const result = await this.documentPricingService.deactivate(id);
+    
+    return new ApiResponseDto(
+      true,
+      'Document pricing deactivated successfully',
+      result
+    );
+  }
+
+  @Post('document-pricing/:id/activate')
+  @ApiOperation({ 
+    summary: 'Activate a document pricing rule',
+    description: 'Activates a previously deactivated document pricing rule'
+  })
+  @ApiParam({ name: 'id', description: 'Document pricing ID', type: 'string' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Document pricing activated successfully',
+    type: DocumentPricingResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Document pricing not found'
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Cannot activate - another active pricing exists for this document type'
+  })
+  async activate(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ApiResponseDto<DocumentPricingResponseDto>> {
+    const result = await this.documentPricingService.activate(id);
+    
+    return new ApiResponseDto(
+      true,
+      'Document pricing activated successfully',
+      result
+    );
+  }
+}
