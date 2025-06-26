@@ -26,6 +26,8 @@ import { Prisma } from '@prisma/client';
 import * as crypto from 'crypto';
 import { Readable } from 'stream';
 
+type TemplateType = 'report_card' | 'certificate' | 'transcript' | 'receipt';
+
 @Injectable()
 export class DocumentsService {
   constructor(
@@ -885,28 +887,180 @@ export class DocumentsService {
 
   // Helper Methods
   private async getTemplateByType(schoolId: string, type: string) {
-    const template = await this.prisma.documentTemplate.findFirst({
-      where: {
-        school_id: schoolId,
-        type,
-        status: 'active',
-      },
-    });
-
-    if (!template) {
-      // Return a default template structure
-      return {
-        id: 'default',
-        name: `Default ${type} Template`,
-        type,
-        template_content: this.getDefaultTemplateContent(type),
-        template_variables: this.getDefaultTemplateVariables(type),
-      };
-    }
-
-    return template;
+  const validTypes: TemplateType[] = ['report_card', 'certificate', 'transcript', 'receipt'];
+  if (!validTypes.includes(type as TemplateType)) {
+    throw new BadRequestException(`Invalid template type: ${type}`);
   }
 
+  const template = await this.prisma.documentTemplate.findFirst({
+    where: {
+      school_id: schoolId,
+      type,
+      status: 'active',
+    },
+  });
+
+  if (!template) {
+    return {
+      id: 'default',
+      name: `Default ${type} Template`,
+      type,
+      template_content: this.getDefaultTemplateContent(type as TemplateType),
+      template_variables: this.getDefaultTemplateVariables(type as TemplateType),
+    };
+  }
+
+  return template;
+}
+
+   // Add the missing helper methods that are referenced but not implemented
+   private async generatePDFFromTemplate(template: any, data: any): Promise<Buffer> {
+    // This is a placeholder implementation
+    // In a real application, you would use a PDF generation library like:
+    // - puppeteer for HTML to PDF
+    // - PDFKit for programmatic PDF creation
+    // - jsPDF for client-side PDF generation
+    
+    // For now, return a simple placeholder PDF buffer
+    const placeholderContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${template.name}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .content { margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${template.name}</h1>
+        </div>
+        <div class="content">
+          <p>Document generated on: ${new Date().toLocaleDateString()}</p>
+          <p>Template Type: ${template.type}</p>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // In production, you would convert this HTML to PDF
+    // For now, just return the HTML as buffer (you should implement actual PDF generation)
+    return Buffer.from(placeholderContent, 'utf8');
+  }
+
+   // Helper method to get default template content
+  private getDefaultTemplateContent(type: TemplateType): { html: string } {
+  const defaultTemplates: { [key in TemplateType]: { html: string } } = {
+    report_card: {
+      html: `
+        <div class="report-card">
+          <h1>{{school_name}} - Report Card</h1>
+          <div class="student-info">
+            <p>Student: {{student_name}}</p>
+            <p>Grade: {{grade_level}}</p>
+            <p>Term: {{term_name}}</p>
+          </div>
+          <div class="grades">
+            {{#each grades}}
+            <div class="grade-item">
+              <span>{{course_name}}: {{grade}} ({{percentage}}%)</span>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+      `,
+    },
+    certificate: {
+      html: `
+        <div class="certificate">
+          <h1>Certificate of {{certificate_type}}</h1>
+          <p>This is to certify that</p>
+          <h2>{{student_name}}</h2>
+          <p>{{description}}</p>
+          <p>Issued on: {{issue_date}}</p>
+          <p>{{school_name}}</p>
+        </div>
+      `,
+    },
+    transcript: {
+      html: `
+        <div class="transcript">
+          <h1>{{school_name}} - Official Transcript</h1>
+          <div class="student-info">
+            <p>Student: {{student_name}}</p>
+            <p>Student ID: {{student_id}}</p>
+            <p>Type: {{transcript_type}}</p>
+          </div>
+          <div class="courses">
+            {{#each courses}}
+            <div class="course-item">
+              <span>{{course_name}}: {{grade}} - {{credits}} credits</span>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+      `,
+    },
+    receipt: {
+      html: `
+        <div class="receipt">
+          <h1>{{school_name}} - Receipt</h1>
+          <p>Receipt Type: {{receipt_type}}</p>
+          <p>Recipient: {{recipient_name}}</p>
+          <p>Amount: {{amount}}</p>
+          <p>Description: {{description}}</p>
+          <p>Date: {{issue_date}}</p>
+        </div>
+      `,
+    },
+  };
+
+  return defaultTemplates[type] || { html: '<div>Default template content</div>' };
+}
+
+  // Helper method to get default template variables
+  private getDefaultTemplateVariables(type: TemplateType): string[] {
+  const defaultVariables: { [key in TemplateType]: string[] } = {
+    report_card: [
+      'school_name',
+      'student_name',
+      'grade_level',
+      'term_name',
+      'grades',
+      'issue_date',
+    ],
+    certificate: [
+      'school_name',
+      'student_name',
+      'certificate_type',
+      'description',
+      'issue_date',
+    ],
+    transcript: [
+      'school_name',
+      'student_name',
+      'student_id',
+      'transcript_type',
+      'courses',
+      'issue_date',
+    ],
+    receipt: [
+      'school_name',
+      'receipt_type',
+      'recipient_name',
+      'amount',
+      'description',
+      'issue_date',
+    ],
+  };
+
+  return defaultVariables[type] || [];
+}
+
+  // Fix the truncated createGeneratedDocument method
   private async createGeneratedDocument(
     userId: string,
     schoolId: string,
@@ -940,5 +1094,16 @@ export class DocumentsService {
         file_url: fileUrl,
         file_type: mimeType,
         file_size: fileBuffer.length,
-        status: '
+        status: 'active',
+      },
+      include: {
+        user: {
+          select: { id: true, first_name: true, last_name: true, email: true },
+        },
+        school: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+  }
 }

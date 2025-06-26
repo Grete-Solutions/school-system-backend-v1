@@ -1,3 +1,5 @@
+import { IsString, IsOptional, IsIn, IsObject } from 'class-validator';
+
 export class UpdateTemplateDto {
   @IsString()
   @IsOptional()

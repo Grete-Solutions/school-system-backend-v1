@@ -1,3 +1,5 @@
+import { IsString, IsOptional, IsIn, IsUUID, IsObject } from 'class-validator';
+
 export class CreateTemplateDto {
   @IsUUID()
   school_id: string;
