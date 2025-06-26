@@ -33,6 +33,7 @@ model User {
   classStudents        ClassStudent[]
   gradedAssessments    Grade[]          @relation("GradedBy")
   createdTemplates DocumentTemplate[]
+  createdDocumentPricing DocumentPricing[] @relation("DocumentPricingCreator")
 }
 
 model Role {
@@ -96,6 +97,7 @@ model School {
   submissions    Submission[]
   gradingPeriods GradingPeriod[]
   documentTemplates DocumentTemplate[]
+  documentPricing DocumentPricing[]
 }
 
 model SchoolUser {
@@ -470,3 +472,28 @@ model DocumentTemplate {
   @@index([school_id, type])
   @@index([school_id, status])
 }
+
+model DocumentPricing {
+  id                String   @id @default(uuid())
+  school_id         String?  // null for global pricing
+  document_type     String   // certificate, transcript, report_card, etc.
+  price_amount      Float    // price in the smallest currency unit (e.g., cents)
+  currency          String   @default("GHS") // currency code
+  is_active         Boolean  @default(true)
+  effective_date    DateTime @default(now())
+  expiry_date       DateTime?
+  description       String?
+  created_by        String
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  
+  // Relations
+  school            School?  @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  creator           User     @relation("DocumentPricingCreator", fields: [created_by], references: [id])
+  
+  @@unique([school_id, document_type, effective_date])
+  @@index([school_id, document_type])
+  @@index([document_type, is_active])
+  @@index([effective_date, expiry_date])
+}
+
