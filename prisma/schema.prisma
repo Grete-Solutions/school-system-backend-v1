@@ -32,6 +32,7 @@ model User {
   auditLogs            AuditLog[]       @relation("UserAuditLogs")
   classStudents        ClassStudent[]
   gradedAssessments    Grade[]          @relation("GradedBy")
+  createdTemplates DocumentTemplate[]
 }
 
 model Role {
@@ -94,6 +95,7 @@ model School {
   grades         Grade[]
   submissions    Submission[]
   gradingPeriods GradingPeriod[]
+  documentTemplates DocumentTemplate[]
 }
 
 model SchoolUser {
@@ -445,4 +447,26 @@ model GradingPeriod {
 
   @@unique([school_id, name, term_id])
   @@index([school_id, is_current])
+}
+
+model DocumentTemplate {
+  id                  String   @id @default(uuid())
+  school_id           String
+  name                String
+  type                String   // report_card, certificate, transcript, receipt
+  description         String?
+  template_content    Json     // HTML template or JSON structure
+  template_variables  Json?    // Available variables for the template
+  status              String   @default("active") // active, inactive
+  version             Int      @default(1)
+  is_default          Boolean  @default(false)
+  created_by          String
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+  school              School   @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  creator             User     @relation(fields: [created_by], references: [id])
+
+  @@unique([school_id, name, type])
+  @@index([school_id, type])
+  @@index([school_id, status])
 }
