@@ -16,6 +16,8 @@ import { AcademicYearsModule } from './academic/academic-years.module';
 import { TermsModule } from './academic/terms.module';
 import { ProgramsModule } from './programs/programs.module';
 import { CoursesModule } from './courses/courses.module';
+import { GradesModule } from './grades/grades.module';
+import { AssessmentsModule } from './assessments/assessments.module';
 
 @Module({
   imports: [
@@ -47,6 +49,8 @@ import { CoursesModule } from './courses/courses.module';
     TermsModule,
     ProgramsModule,
     CoursesModule,
+    GradesModule,
+    AssessmentsModule,
   ],
 })
 export class AppModule {}
