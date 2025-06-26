@@ -10,5 +10,6 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
   imports: [AuditLogsModule],
   controllers: [DocumentsController],
   providers: [DocumentsService, PrismaService, JwtService, supabaseProvider],
+  exports: [DocumentsService], // Export service for use in other modules
 })
 export class DocumentsModule {}

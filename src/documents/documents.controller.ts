@@ -1,14 +1,29 @@
-import { Controller, Post, Body, Get, Param, Put, Query, UseGuards, Request, UseInterceptors, BadRequestException, HttpStatus } from '@nestjs/common';
+import { 
+  Controller, 
+  Post, 
+  Body, 
+  Get, 
+  Param, 
+  Put, 
+  Delete,
+  Query, 
+  UseGuards, 
+  Request, 
+  UseInterceptors, 
+  BadRequestException, 
+  HttpStatus 
+} from '@nestjs/common';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BusboyInterceptor } from './busboy.interceptor';
 
 interface RequestWithUser extends Request {
   user: { sub: string; role: string };
   file?: { buffer: Buffer; originalname: string; mimetype: string; size: number };
-  body: CreateDocumentDto | any; // Allow flexibility for body parsing
+  body: CreateDocumentDto | any;
 }
 
 @Controller('documents')
@@ -31,15 +46,57 @@ export class DocumentsController {
     const document = await this.documentsService.createDocument(req.user.sub, req.body, req.file);
     console.log('Returning created document:', JSON.stringify(document));
     return {
-      statusCode: HttpStatus.OK,
+      statusCode: HttpStatus.CREATED,
       data: document,
+    };
+  }
+
+  @Get('students/:studentId/documents')
+  @UseGuards(JwtAuthGuard)
+  async getStudentDocuments(
+    @Request() req: RequestWithUser,
+    @Param('studentId') studentId: string,
+    @Query() paginationQuery: PaginationQueryDto,
+  ) {
+    const result = await this.documentsService.getStudentDocuments(
+      req.user.sub,
+      studentId,
+      paginationQuery,
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      data: result.data,
+      pagination: result.pagination,
+    };
+  }
+
+  @Get('schools/:schoolId/documents')
+  @UseGuards(JwtAuthGuard)
+  async getSchoolDocuments(
+    @Request() req: RequestWithUser,
+    @Param('schoolId') schoolId: string,
+    @Query() paginationQuery: PaginationQueryDto,
+  ) {
+    const result = await this.documentsService.getSchoolDocuments(
+      req.user.sub,
+      schoolId,
+      paginationQuery,
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      data: result.data,
+      pagination: result.pagination,
     };
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getById(@Request() req: RequestWithUser, @Param('id') id: string) {
-    return this.documentsService.getDocumentById(id, req.user.sub);
+    const document = await this.documentsService.getDocumentById(id, req.user.sub);
+    return {
+      statusCode: HttpStatus.OK,
+      data: document,
+    };
   }
 
   @Put(':id')
@@ -49,9 +106,35 @@ export class DocumentsController {
     @Param('id') id: string,
     @Body() dto: UpdateDocumentDto,
   ) {
-    return this.documentsService.updateDocument(id, req.user.sub, dto);
+    const document = await this.documentsService.updateDocument(id, req.user.sub, dto);
+    return {
+      statusCode: HttpStatus.OK,
+      data: document,
+    };
   }
 
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  async delete(@Request() req: RequestWithUser, @Param('id') id: string) {
+    const result = await this.documentsService.deleteDocument(id, req.user.sub);
+    return {
+      statusCode: HttpStatus.OK,
+      message: result.message,
+    };
+  }
+
+  @Post(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  async publish(@Request() req: RequestWithUser, @Param('id') id: string) {
+    const document = await this.documentsService.publishDocument(id, req.user.sub);
+    return {
+      statusCode: HttpStatus.OK,
+      data: document,
+      message: 'Document published successfully',
+    };
+  }
+
+  // Legacy endpoint for backward compatibility
   @Get()
   @UseGuards(JwtAuthGuard)
   async getAll(
@@ -60,6 +143,25 @@ export class DocumentsController {
     @Query('limit') limit = '10',
     @Query('offset') offset = '0',
   ) {
-    return this.documentsService.getAllDocuments(req.user.sub, schoolId, parseInt(limit), parseInt(offset));
+    if (!schoolId) {
+      throw new BadRequestException('schoolId query parameter is required');
+    }
+    
+    const paginationQuery: PaginationQueryDto = {
+      page: Math.floor(parseInt(offset) / parseInt(limit)) + 1,
+      limit: parseInt(limit),
+    };
+
+    const result = await this.documentsService.getSchoolDocuments(
+      req.user.sub,
+      schoolId,
+      paginationQuery,
+    );
+
+    return {
+      statusCode: HttpStatus.OK,
+      data: result.data,
+      pagination: result.pagination,
+    };
   }
 }

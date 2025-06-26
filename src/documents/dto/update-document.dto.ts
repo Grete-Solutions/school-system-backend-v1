@@ -10,7 +10,7 @@ export class UpdateDocumentDto {
   description?: string;
 
   @IsString()
-  @IsIn(['active', 'archived'])
+  @IsIn(['active', 'draft', 'published', 'archived'])
   @IsOptional()
   status?: string;
 }

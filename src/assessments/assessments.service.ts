@@ -331,20 +331,48 @@ export class AssessmentsService {
       }
     }
 
-    // Get teacher record
+    // Get teacher record or handle admin/school_admin case
     const teacher = await this.prisma.teacher.findUnique({
       where: { user_id: user.id },
     });
 
+    // For admin/school_admin without teacher record, we need to handle this case
     if (!teacher && !['admin', 'school_admin'].includes(user.role)) {
       throw new ForbiddenException('Only teachers can create assessments');
+    }
+
+    // If admin/school_admin doesn't have a teacher record, we need to either:
+    // 1. Create a default/system teacher record, or
+    // 2. Modify the schema to make teacher_id optional, or
+    // 3. Find a teacher in the school to assign as creator
+
+    let teacherId: string;
+
+    if (teacher) {
+      teacherId = teacher.id;
+    } else if (['admin', 'school_admin'].includes(user.role)) {
+      // Option 3: Find the first active teacher in the school
+      const schoolTeacher = await this.prisma.teacher.findFirst({
+        where: {
+          school_id: schoolId,
+          status: 'active',
+        },
+      });
+
+      if (!schoolTeacher) {
+        throw new BadRequestException('No active teachers found in the school to assign as assessment creator');
+      }
+
+      teacherId = schoolTeacher.id;
+    } else {
+      throw new ForbiddenException('Access denied');
     }
 
     const assessment = await this.prisma.assessment.create({
       data: {
         ...createAssessmentDto,
         school_id: schoolId,
-        teacher_id: teacher?.id ? teacher.id : undefined,
+        teacher_id: teacherId,
         due_date: createAssessmentDto.due_date ? new Date(createAssessmentDto.due_date) : null,
       },
       include: {
@@ -690,13 +718,35 @@ export class AssessmentsService {
       })
     );
 
-    // Get teacher record
+    // Get teacher record or handle admin/school_admin case
     const teacher = await this.prisma.teacher.findUnique({
       where: { user_id: user.id },
     });
 
     if (!teacher && !['admin', 'school_admin'].includes(user.role)) {
       throw new ForbiddenException('Only teachers can create assessments');
+    }
+
+    // For admin/school_admin, find a teacher in the first school
+    let teacherId: string;
+    if (teacher) {
+      teacherId = teacher.id;
+    } else if (['admin', 'school_admin'].includes(user.role)) {
+      const firstSchoolId = validationResults[0].schoolId;
+      const schoolTeacher = await this.prisma.teacher.findFirst({
+        where: {
+          school_id: firstSchoolId,
+          status: 'active',
+        },
+      });
+
+      if (!schoolTeacher) {
+        throw new BadRequestException('No active teachers found in the school to assign as assessment creator');
+      }
+
+      teacherId = schoolTeacher.id;
+    } else {
+      throw new ForbiddenException('Access denied');
     }
 
     // Create all assessments in a transaction
@@ -706,7 +756,7 @@ export class AssessmentsService {
           data: {
             ...assessment,
             school_id: schoolId,
-            teacher_id: teacher?.id ? teacher.id : undefined,
+            teacher_id: teacherId,
             due_date: assessment.due_date ? new Date(assessment.due_date) : null,
           },
           include: {

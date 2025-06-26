@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsIn } from 'class-validator';
 
 export class CreateDocumentDto {
   @IsUUID()
@@ -10,4 +10,9 @@ export class CreateDocumentDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsIn(['active', 'draft', 'published', 'archived'])
+  @IsOptional()
+  status?: string = 'active';
 }
