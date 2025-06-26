@@ -1,4 +1,4 @@
-import { IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GradeUpdateItem {

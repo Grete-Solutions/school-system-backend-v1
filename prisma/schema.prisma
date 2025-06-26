@@ -31,7 +31,7 @@ model User {
   reports              Report[]         @relation("UserReports")
   auditLogs            AuditLog[]       @relation("UserAuditLogs")
   classStudents        ClassStudent[]
-  gradedAssessments Grade[] @relation("GradedBy")
+  gradedAssessments    Grade[]          @relation("GradedBy")
 }
 
 model Role {
@@ -71,29 +71,29 @@ model UserPermission {
 }
 
 model School {
-  id            String         @id @default(uuid())
-  name          String
-  address       String
-  phone_number  String?
-  email         String?        @unique
-  logo_url      String?
-  status        String         @default("active")
-  created_at    DateTime       @default(now())
-  updated_at    DateTime       @updatedAt
-  schoolUsers   SchoolUser[]
-  students      Student[]
-  teachers      Teacher[]
-  documents     Document[]
-  notifications Notification[] @relation("SchoolNotifications")
-  reports       Report[]       @relation("SchoolReports")
-  academicYears AcademicYear[]
-  classes       Class[]
-  programs      Program[]
-  courses       Course[]
+  id             String          @id @default(uuid())
+  name           String
+  address        String
+  phone_number   String?
+  email          String?         @unique
+  logo_url       String?
+  status         String          @default("active")
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+  schoolUsers    SchoolUser[]
+  students       Student[]
+  teachers       Teacher[]
+  documents      Document[]
+  notifications  Notification[]  @relation("SchoolNotifications")
+  reports        Report[]        @relation("SchoolReports")
+  academicYears  AcademicYear[]
+  classes        Class[]
+  programs       Program[]
+  courses        Course[]
   assessments    Assessment[]
   grades         Grade[]
   submissions    Submission[]
-  gradingPeriods GradingPeriod[] 
+  gradingPeriods GradingPeriod[]
 }
 
 model SchoolUser {
@@ -123,24 +123,24 @@ model Student {
   user            User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
   school          School         @relation(fields: [school_id], references: [id], onDelete: Cascade)
   classStudents   ClassStudent[]
-  grades      Grade[]
-  submissions Submission[]
+  grades          Grade[]
+  submissions     Submission[]
 }
 
 model Teacher {
-  id         String    @id @default(uuid())
-  user_id    String    @unique
-  school_id  String
-  teacher_id String    @unique
-  department String?
-  hire_date  DateTime?
-  status     String    @default("active")
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  school     School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
-  classes    Class[]
-  courses    Course[]
+  id          String       @id @default(uuid())
+  user_id     String       @unique
+  school_id   String
+  teacher_id  String       @unique
+  department  String?
+  hire_date   DateTime?
+  status      String       @default("active")
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  user        User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  school      School       @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  classes     Class[]
+  courses     Course[]
   assessments Assessment[]
 }
 
@@ -225,21 +225,21 @@ model AcademicYear {
 }
 
 model Term {
-  id               String       @id @default(uuid())
+  id               String          @id @default(uuid())
   academic_year_id String
   name             String // e.g., "Fall 2024", "Spring 2025", "Term 1", "Semester 1"
   start_date       DateTime
   end_date         DateTime?
-  is_current       Boolean      @default(false)
-  status           String       @default("active") // active, inactive, completed
+  is_current       Boolean         @default(false)
+  status           String          @default("active") // active, inactive, completed
   description      String?
-  created_at       DateTime     @default(now())
-  updated_at       DateTime     @updatedAt
-  academicYear     AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+  academicYear     AcademicYear    @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
   classes          Class[]
-  assessments    Assessment[]
-  grades         Grade[]
-  gradingPeriods GradingPeriod[]
+  assessments      Assessment[]
+  grades           Grade[]
+  gradingPeriods   GradingPeriod[]
 
   @@unique([academic_year_id, name])
   @@index([academic_year_id, is_current])
@@ -262,8 +262,8 @@ model Class {
   term             Term?          @relation(fields: [term_id], references: [id], onDelete: SetNull)
   classStudents    ClassStudent[]
   classCourses     ClassCourse[]
-  assessments Assessment[]
-  grades      Grade[]
+  assessments      Assessment[]
+  grades           Grade[]
 
   @@unique([school_id, academic_year_id, name])
   @@index([school_id, academic_year_id])
@@ -281,7 +281,6 @@ model ClassStudent {
 
   @@unique([class_id, student_id])
 }
-
 
 model Program {
   id          String   @id @default(uuid())
@@ -301,24 +300,24 @@ model Program {
 }
 
 model Course {
-  id             String        @id @default(uuid())
-  school_id      String
-  teacher_id     String?
-  name           String
-  code           String? // e.g., "MATH101", "ENG201"
-  description    String?
-  credits        Int?          @default(0)
-  department     String?
-  grade_level    String?       // e.g., "9", "10", "11", "12" or "Elementary", "Middle", "High"
-  prerequisites  String?       // JSON string of prerequisite course IDs
-  status         String        @default("active") // active, inactive, archived
-  created_at     DateTime      @default(now())
-  updated_at     DateTime      @updatedAt
-  school         School        @relation(fields: [school_id], references: [id], onDelete: Cascade)
-  teacher        Teacher?      @relation(fields: [teacher_id], references: [id], onDelete: SetNull)
-  classCourses   ClassCourse[]
-  assessments Assessment[]
-  grades      Grade[]
+  id            String        @id @default(uuid())
+  school_id     String
+  teacher_id    String?
+  name          String
+  code          String? // e.g., "MATH101", "ENG201"
+  description   String?
+  credits       Int?          @default(0)
+  department    String?
+  grade_level   String? // e.g., "9", "10", "11", "12" or "Elementary", "Middle", "High"
+  prerequisites String? // JSON string of prerequisite course IDs
+  status        String        @default("active") // active, inactive, archived
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  school        School        @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  teacher       Teacher?      @relation(fields: [teacher_id], references: [id], onDelete: SetNull)
+  classCourses  ClassCourse[]
+  assessments   Assessment[]
+  grades        Grade[]
 
   @@unique([school_id, code])
   @@index([school_id, department])
@@ -338,32 +337,32 @@ model ClassCourse {
 }
 
 model Assessment {
-  id               String            @id @default(uuid())
+  id               String       @id @default(uuid())
   school_id        String
   class_id         String?
   course_id        String?
   teacher_id       String
   title            String
   description      String?
-  type             String            @default("exam") // exam, quiz, assignment, project, presentation
+  type             String       @default("exam") // exam, quiz, assignment, project, presentation
   total_points     Float
   passing_score    Float?
   due_date         DateTime?
-  created_date     DateTime          @default(now())
-  status           String            @default("draft") // draft, published, completed, archived
+  created_date     DateTime     @default(now())
+  status           String       @default("draft") // draft, published, completed, archived
   instructions     String?
-  grading_criteria Json?             // JSON object for rubrics/criteria
-  allow_late       Boolean           @default(false)
-  late_penalty     Float?            // percentage penalty for late submissions
-  weight           Float?            @default(1.0) // weight in overall grade calculation
+  grading_criteria Json? // JSON object for rubrics/criteria
+  allow_late       Boolean      @default(false)
+  late_penalty     Float? // percentage penalty for late submissions
+  weight           Float?       @default(1.0) // weight in overall grade calculation
   term_id          String?
-  created_at       DateTime          @default(now())
-  updated_at       DateTime          @updatedAt
-  school           School            @relation(fields: [school_id], references: [id], onDelete: Cascade)
-  class            Class?            @relation(fields: [class_id], references: [id], onDelete: SetNull)
-  course           Course?           @relation(fields: [course_id], references: [id], onDelete: SetNull)
-  teacher          Teacher           @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
-  term             Term?             @relation(fields: [term_id], references: [id], onDelete: SetNull)
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  school           School       @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  class            Class?       @relation(fields: [class_id], references: [id], onDelete: SetNull)
+  course           Course?      @relation(fields: [course_id], references: [id], onDelete: SetNull)
+  teacher          Teacher      @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  term             Term?        @relation(fields: [term_id], references: [id], onDelete: SetNull)
   grades           Grade[]
   submissions      Submission[]
 
@@ -374,7 +373,7 @@ model Assessment {
 }
 
 model Grade {
-  id              String       @id @default(uuid())
+  id              String     @id @default(uuid())
   student_id      String
   assessment_id   String
   class_id        String?
@@ -383,22 +382,24 @@ model Grade {
   points_earned   Float
   points_possible Float
   percentage      Float
-  letter_grade    String?      // A, B, C, D, F, etc.
-  status          String       @default("final") // draft, final, incomplete, excused
-  graded_by       String       // teacher user ID
-  graded_at       DateTime     @default(now())
+  letter_grade    String? // A, B, C, D, F, etc.
+  status          String     @default("final") // draft, final, incomplete, excused
+  graded_by       String // teacher user ID
+  graded_at       DateTime   @default(now())
   feedback        String?
-  is_late         Boolean      @default(false)
-  late_penalty    Float?       // actual penalty applied
-  extra_credit    Float?       @default(0)
-  created_at      DateTime     @default(now())
-  updated_at      DateTime     @updatedAt
-  student         Student      @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  assessment      Assessment   @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
-  class           Class?       @relation(fields: [class_id], references: [id], onDelete: SetNull)
-  course          Course?      @relation(fields: [course_id], references: [id], onDelete: SetNull)
-  term            Term?        @relation(fields: [term_id], references: [id], onDelete: SetNull)
-  grader          User         @relation(fields: [graded_by], references: [id])
+  is_late         Boolean    @default(false)
+  late_penalty    Float? // actual penalty applied
+  extra_credit    Float?     @default(0)
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+  student         Student    @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  assessment      Assessment @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+  class           Class?     @relation(fields: [class_id], references: [id], onDelete: SetNull)
+  course          Course?    @relation(fields: [course_id], references: [id], onDelete: SetNull)
+  term            Term?      @relation(fields: [term_id], references: [id], onDelete: SetNull)
+  grader          User       @relation("GradedBy", fields: [graded_by], references: [id])
+  School          School?    @relation(fields: [schoolId], references: [id])
+  schoolId        String?
 
   @@unique([student_id, assessment_id])
   @@index([student_id, term_id])
@@ -407,38 +408,40 @@ model Grade {
 }
 
 model Submission {
-  id              String       @id @default(uuid())
+  id              String     @id @default(uuid())
   student_id      String
   assessment_id   String
-  submitted_at    DateTime     @default(now())
-  content         Json?        // submission content/answers
-  file_urls       String[]     // array of file URLs
-  status          String       @default("submitted") // submitted, graded, returned
-  submission_type String       @default("online") // online, paper, file_upload
-  attempt_number  Int          @default(1)
-  created_at      DateTime     @default(now())
-  updated_at      DateTime     @updatedAt
-  student         Student      @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  assessment      Assessment   @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+  submitted_at    DateTime   @default(now())
+  content         Json? // submission content/answers
+  file_urls       String[] // array of file URLs
+  status          String     @default("submitted") // submitted, graded, returned
+  submission_type String     @default("online") // online, paper, file_upload
+  attempt_number  Int        @default(1)
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+  student         Student    @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  assessment      Assessment @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+  School          School?    @relation(fields: [schoolId], references: [id])
+  schoolId        String?
 
   @@unique([student_id, assessment_id, attempt_number])
   @@index([assessment_id])
 }
 
 model GradingPeriod {
-  id           String     @id @default(uuid())
-  school_id    String
-  term_id      String?
-  name         String     // "Q1", "Midterm", "Final", etc.
-  start_date   DateTime
-  end_date     DateTime
-  weight       Float      @default(1.0) // weight in overall grade calculation
-  is_current   Boolean    @default(false)
-  status       String     @default("active") // active, completed, archived
-  created_at   DateTime   @default(now())
-  updated_at   DateTime   @updatedAt
-  school       School     @relation(fields: [school_id], references: [id], onDelete: Cascade)
-  term         Term?      @relation(fields: [term_id], references: [id], onDelete: SetNull)
+  id         String   @id @default(uuid())
+  school_id  String
+  term_id    String?
+  name       String // "Q1", "Midterm", "Final", etc.
+  start_date DateTime
+  end_date   DateTime
+  weight     Float    @default(1.0) // weight in overall grade calculation
+  is_current Boolean  @default(false)
+  status     String   @default("active") // active, completed, archived
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  school     School   @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  term       Term?    @relation(fields: [term_id], references: [id], onDelete: SetNull)
 
   @@unique([school_id, name, term_id])
   @@index([school_id, is_current])

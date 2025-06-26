@@ -431,11 +431,22 @@ export class GradesService {
     const updatePromises = gradeUpdates.map(async (gradeUpdate) => {
       const existingGrade = existingGrades.find(g => g.id === gradeUpdate.id);
       
-      let updateData = { ...gradeUpdate };
-      delete updateData.id; // Remove id from update data
+      // Create a type-safe update object
+      const updateData: Partial<{
+        points_earned: number;
+        letter_grade: string;
+        status: string;
+        feedback: string;
+        percentage: number;
+      }> = {
+        ...(gradeUpdate.points_earned !== undefined && { points_earned: gradeUpdate.points_earned }),
+        ...(gradeUpdate.letter_grade !== undefined && { letter_grade: gradeUpdate.letter_grade }),
+        ...(gradeUpdate.status !== undefined && { status: gradeUpdate.status }),
+        ...(gradeUpdate.feedback !== undefined && { feedback: gradeUpdate.feedback }),
+      };
 
       // Recalculate percentage if points changed
-      if (gradeUpdate.points_earned !== undefined) {
+      if (gradeUpdate.points_earned !== undefined && existingGrade) {
         const points_possible = existingGrade.points_possible;
         updateData.percentage = (gradeUpdate.points_earned / points_possible) * 100;
         
